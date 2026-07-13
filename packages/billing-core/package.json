@@ -1,0 +1,9 @@
+{
+  "name": "@billforge/billing-core",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "test": "npx vitest run" },
+  "dependencies": { "@billforge/shared": "*" },
+  "devDependencies": { "vitest": "^3.0.5" }
+}
