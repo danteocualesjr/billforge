@@ -49,6 +49,7 @@ body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── Login ── */
@@ -124,6 +125,11 @@ body {
 .login-card {
   width: 100%;
   max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 36px;
+  box-shadow: var(--shadow-md);
 }
 
 .login-card h2 {
@@ -197,7 +203,7 @@ body {
 
 .sidebar {
   width: var(--sidebar-current-width);
-  background: var(--sidebar-bg);
+  background: linear-gradient(180deg, #151c2c 0%, var(--sidebar-bg) 100%);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -481,6 +487,9 @@ body {
   flex-direction: column;
   min-width: 0;
   transition: margin-left 0.22s ease;
+  background:
+    radial-gradient(ellipse at top right, rgba(249, 115, 22, 0.04), transparent 55%),
+    var(--bg);
 }
 
 /* ── Topbar ── */
@@ -574,6 +583,11 @@ body {
   color: #9ca3af;
 }
 
+.search-box:focus-within {
+  border-color: #fdba74;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
 .search-kbd {
   font-size: 0.6875rem;
   font-weight: 500;
@@ -592,6 +606,13 @@ body {
   padding: 28px 32px 40px;
   max-width: 1280px;
   width: 100%;
+  margin: 0 auto;
+  animation: content-in 0.25s ease;
+}
+
+@keyframes content-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .page-header {
@@ -839,6 +860,25 @@ body {
   min-height: 280px;
   display: flex;
   flex-direction: column;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.chart-panel:hover {
+  box-shadow: var(--shadow-md);
+  border-color: #dde1e6;
+}
+
+.icon-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.btn-loading {
+  pointer-events: none;
 }
 
 .chart-panel-header {

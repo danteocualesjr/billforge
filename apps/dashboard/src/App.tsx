@@ -649,13 +649,13 @@ export default function App() {
           <div className="topbar-center">
             <div className="search-box">
               <IconSearch className="search-icon" />
-              <input placeholder="Search customers, invoices, …" disabled />
+              <input placeholder="Search customers, invoices, subscriptions…" disabled />
               <span className="search-kbd">⌘K</span>
             </div>
           </div>
           <div className="topbar-right">
-            <button className="btn btn-ghost" onClick={loadAll} disabled={loading}>
-              <IconRefresh />
+            <button className={`btn btn-ghost${loading ? ' btn-loading' : ''}`} onClick={loadAll} disabled={loading}>
+              <IconRefresh className={loading ? 'icon-spin' : undefined} />
               Refresh
             </button>
             <button className="btn btn-primary" onClick={() => setToast('Create — coming soon')}>
@@ -665,7 +665,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="content">
+        <div className="content" key={tab}>
           <div className="page-header">
             <div>
               <h1>{PAGE_TITLES[tab]}</h1>
