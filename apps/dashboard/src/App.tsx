@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { api, getApiKey, setApiKey } from './api';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { api, clearApiKey, DEMO_API_KEY, getApiKey, setApiKey } from './api';
+import { getMockDashboardData } from './mockData';
 import {
   IconChart,
   IconCheck,
@@ -22,6 +23,7 @@ type Tab = 'overview' | 'customers' | 'subscriptions' | 'invoices' | 'usage' | '
 type Period = '7d' | '30d' | '12m';
 
 const SIDEBAR_COLLAPSED_KEY = 'billforge_sidebar_collapsed';
+const MOCK_MODE_KEY = 'billforge_mock_mode';
 
 function getSidebarCollapsed() {
   return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
@@ -340,7 +342,8 @@ function PeriodToggle({ value, onChange }: { value: Period; onChange: (p: Period
 }
 
 export default function App() {
-  const [apiKey, setApiKeyState] = useState(getApiKey());
+  const [apiKey, setApiKeyState] = useState(getApiKey() || DEMO_API_KEY);
+  const [useMock, setUseMock] = useState(() => localStorage.getItem(MOCK_MODE_KEY) === '1');
   const [tab, setTab] = useState<Tab>('overview');
   const [period, setPeriod] = useState<Period>('12m');
   const [loading, setLoading] = useState(false);
@@ -353,9 +356,28 @@ export default function App() {
   const [usage, setUsage] = useState<any[]>([]);
   const [toast, setToast] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getSidebarCollapsed);
+  const keyRecoveryAttempted = useRef(false);
+
+  function applyMockData() {
+    const mock = getMockDashboardData();
+    setCustomers(mock.customers);
+    setProducts(mock.products);
+    setPrices(mock.prices);
+    setSubscriptions(mock.subscriptions);
+    setInvoices(mock.invoices);
+    setUsage(mock.usage);
+    setUseMock(true);
+    setError('');
+    localStorage.setItem(MOCK_MODE_KEY, '1');
+  }
 
   async function loadAll() {
-    if (!apiKey) return;
+    if (useMock) {
+      applyMockData();
+      return;
+    }
+    if (!getApiKey()) return;
+
     setLoading(true);
     setError('');
     try {
@@ -373,25 +395,65 @@ export default function App() {
       setSubscriptions(s.data);
       setInvoices(i.data);
       setUsage(u.data);
+      setUseMock(false);
+      localStorage.removeItem(MOCK_MODE_KEY);
+      keyRecoveryAttempted.current = false;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
+      const msg = e instanceof Error ? e.message : 'Failed to load';
+
+      if (msg === 'Invalid API key' && getApiKey() !== DEMO_API_KEY && !keyRecoveryAttempted.current) {
+        keyRecoveryAttempted.current = true;
+        setApiKey(DEMO_API_KEY);
+        setApiKeyState(DEMO_API_KEY);
+        return;
+      }
+
+      applyMockData();
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadAll();
-  }, [apiKey]);
+    if (useMock || getApiKey()) {
+      loadAll();
+    }
+  }, [apiKey, useMock]);
 
   function saveKey() {
+    localStorage.removeItem(MOCK_MODE_KEY);
+    setUseMock(false);
+    keyRecoveryAttempted.current = false;
     setApiKey(apiKey);
-    loadAll();
+    setApiKeyState(apiKey);
+  }
+
+  function startMockMode() {
+    clearApiKey();
+    setApiKeyState('');
+    setUseMock(true);
+    applyMockData();
+  }
+
+  function useDemoKey() {
+    localStorage.removeItem(MOCK_MODE_KEY);
+    setUseMock(false);
+    keyRecoveryAttempted.current = false;
+    setApiKey(DEMO_API_KEY);
+    setApiKeyState(DEMO_API_KEY);
   }
 
   function signOut() {
-    setApiKey('');
+    clearApiKey();
     setApiKeyState('');
+    localStorage.removeItem(MOCK_MODE_KEY);
+    setUseMock(false);
+    setCustomers([]);
+    setProducts([]);
+    setPrices([]);
+    setSubscriptions([]);
+    setInvoices([]);
+    setUsage([]);
   }
 
   function toggleSidebar() {
@@ -403,6 +465,13 @@ export default function App() {
   }
 
   async function payInvoice(id: string) {
+    if (useMock) {
+      setInvoices((prev) =>
+        prev.map((inv) => (inv.id === id ? { ...inv, status: 'paid', paid_at: new Date().toISOString() } : inv)),
+      );
+      setToast('Invoice marked as paid');
+      return;
+    }
     await api.payInvoice(id);
     setToast('Invoice marked as paid');
     loadAll();
@@ -447,11 +516,11 @@ export default function App() {
   const navCounts: Partial<Record<Tab, number>> = {
     customers: customers.length,
     subscriptions: subscriptions.length,
-    invoices: invoices.length,
+    invoices: openInvoices.length + pastDueInvoices.length,
     products: products.length,
   };
 
-  if (!getApiKey()) {
+  if (!getApiKey() && !useMock) {
     return (
       <div className="login-layout">
         <div className="login-left">
@@ -473,14 +542,22 @@ export default function App() {
               className="field-input"
               value={apiKey}
               onChange={(e) => setApiKeyState(e.target.value)}
-              placeholder="bf_test_..."
+              placeholder={DEMO_API_KEY}
               onKeyDown={(e) => e.key === 'Enter' && saveKey()}
             />
             <button className="btn btn-accent btn-full" onClick={saveKey}>
               Continue
             </button>
+            <button className="btn btn-ghost btn-full login-secondary-btn" type="button" onClick={useDemoKey}>
+              Use demo API key
+            </button>
+            <button className="btn btn-ghost btn-full login-secondary-btn" type="button" onClick={startMockMode}>
+              Browse with sample data
+            </button>
             <p className="hint">
-              Run <code>npm run seed</code> to generate a test key.
+              Demo key: <code>{DEMO_API_KEY}</code>
+              <br />
+              Run <code>npm run seed</code> to reset the database.
             </p>
           </div>
         </div>
@@ -544,9 +621,9 @@ export default function App() {
 
         <div className="sidebar-footer">
           <button type="button" className="user-card" onClick={signOut} title="Sign out">
-            <Avatar name="Demo User" email="demo@billforge.dev" />
+            <Avatar name="Riley Park" email="riley@acme.inc" />
             <span className="user-card-info">
-              <span className="user-card-name">Demo User</span>
+              <span className="user-card-name">Riley Park</span>
               <span className="user-card-org">Acme Inc.</span>
             </span>
             <IconChevronRight className="user-card-chevron" />
@@ -598,6 +675,12 @@ export default function App() {
               </span>
             ) : null}
           </div>
+
+          {useMock && (
+            <div className="alert alert-info">
+              Showing sample data offline. Start the API on port 3001 and sign in with the demo key for live data.
+            </div>
+          )}
 
           {error && (
             <div className="alert alert-error">

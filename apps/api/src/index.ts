@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { ensureDemoData } from './seed.js';
 import { authMiddleware } from './middleware/auth.js';
 import { idempotencyMiddleware } from './middleware/idempotency.js';
 import { catalogRoutes } from './routes/catalog.js';
@@ -32,6 +33,12 @@ app.post('/internal/process-invoices', async (c) => {
 });
 
 const port = Number(process.env.PORT ?? 3001);
+
+const demo = ensureDemoData();
+if (demo.seeded) {
+  console.log('Seeded demo data. API key:', demo.apiKey);
+}
+
 console.log(`BillForge API running on http://localhost:${port}`);
 
 serve({ fetch: app.fetch, port });

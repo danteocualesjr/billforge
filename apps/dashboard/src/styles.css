@@ -1317,6 +1317,16 @@ tbody tr:hover {
   border: 1px solid #fecaca;
 }
 
+.alert-info {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid #fed7aa;
+}
+
+.login-secondary-btn {
+  margin-top: 10px;
+}
+
 .loading-bar {
   height: 3px;
   background: linear-gradient(90deg, var(--accent), #fdba74, var(--accent));
