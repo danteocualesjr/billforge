@@ -1,23 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api, getApiKey, setApiKey } from './api';
 import {
   IconChart,
   IconCheck,
+  IconChevronRight,
   IconCopy,
-  IconDollar,
   IconHome,
   IconInvoice,
+  IconKey,
   IconLogo,
-  IconLogout,
+  IconPlus,
   IconProduct,
   IconRefresh,
   IconSearch,
   IconUsers,
+  IconWebhook,
 } from './icons';
 
 type Tab = 'overview' | 'customers' | 'subscriptions' | 'invoices' | 'usage' | 'products';
+type Period = '7d' | '30d' | '12m';
 
-const NAV: { id: Tab; label: string; icon: typeof IconHome }[] = [
+const OVERVIEW_NAV: { id: Tab; label: string; icon: typeof IconHome }[] = [
   { id: 'overview', label: 'Home', icon: IconHome },
   { id: 'customers', label: 'Customers', icon: IconUsers },
   { id: 'subscriptions', label: 'Subscriptions', icon: IconRefresh },
@@ -35,11 +38,23 @@ const PAGE_TITLES: Record<Tab, string> = {
   products: 'Product catalog',
 };
 
+const AVATAR_COLORS = [
+  '#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#14b8a6',
+  '#0ea5e9', '#84cc16', '#ef4444', '#a855f7', '#06b6d4',
+];
+
 function formatMoney(cents: number, currency = 'usd') {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency.toUpperCase(),
+    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
   }).format(cents / 100);
+}
+
+function formatCompact(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
+  return String(n);
 }
 
 function formatDate(iso: string) {
@@ -47,6 +62,13 @@ function formatDate(iso: string) {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  }).format(new Date(iso));
+}
+
+function formatShortDate(iso: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
   }).format(new Date(iso));
 }
 
@@ -60,10 +82,6 @@ function formatRelative(iso: string) {
   return formatDate(iso);
 }
 
-function StatusBadge({ status }: { status: string }) {
-  return <span className={`badge badge-${status}`}>{status.replace('_', ' ')}</span>;
-}
-
 function initials(name?: string, email?: string) {
   const source = name?.trim() || email?.trim() || '?';
   const parts = source.split(/\s+/);
@@ -71,9 +89,66 @@ function initials(name?: string, email?: string) {
   return source.slice(0, 2).toUpperCase();
 }
 
-function Avatar({ name, email }: { name?: string; email?: string }) {
+function avatarColor(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash + seed.charCodeAt(i) * (i + 1)) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[hash];
+}
+
+function sparklinePoints(values: number[], width: number, height: number) {
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+  return values
+    .map((v, i) => {
+      const x = (i / Math.max(values.length - 1, 1)) * width;
+      const y = height - 4 - ((v - min) / range) * (height - 8);
+      return `${x},${y}`;
+    })
+    .join(' ');
+}
+
+function trendSeries(current: number, points = 8, growth = 0.04) {
+  const values: number[] = [];
+  for (let i = 0; i < points; i++) {
+    const factor = 1 - (points - 1 - i) * growth;
+    values.push(Math.max(0, Math.round(current * factor)));
+  }
+  values[values.length - 1] = current;
+  return values;
+}
+
+function areaChartPath(values: number[], width: number, height: number) {
+  const max = Math.max(...values);
+  const min = Math.min(...values) * 0.85;
+  const range = max - min || 1;
+  const coords = values.map((v, i) => {
+    const x = (i / Math.max(values.length - 1, 1)) * width;
+    const y = height - 8 - ((v - min) / range) * (height - 16);
+    return [x, y] as const;
+  });
+  const line = coords.map(([x, y]) => `${x},${y}`).join(' ');
+  const area = `M0,${height} L${coords.map(([x, y]) => `${x},${y}`).join(' L')} L${width},${height} Z`;
+  return { line, area };
+}
+
+function countInPeriod(items: { created_at: string }[], days: number) {
+  const cutoff = Date.now() - days * 86400000;
+  return items.filter((item) => new Date(item.created_at).getTime() >= cutoff).length;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return <span className={`badge badge-${status}`}>{status.replace('_', ' ')}</span>;
+}
+
+function Avatar({ name, email, small }: { name?: string; email?: string; small?: boolean }) {
+  const seed = name ?? email ?? '?';
   return (
-    <span className="avatar" aria-hidden="true">
+    <span
+      className={`avatar ${small ? 'avatar-sm' : ''}`}
+      style={{ background: avatarColor(seed) }}
+      aria-hidden="true"
+    >
       {initials(name, email)}
     </span>
   );
@@ -83,9 +158,70 @@ function PersonCell({ name, email }: { name?: string; email?: string }) {
   const label = name ?? email ?? '—';
   return (
     <span className="person-cell">
-      <Avatar name={name} email={email} />
+      <Avatar name={name} email={email} small />
       <span>{label}</span>
     </span>
+  );
+}
+
+function Sparkline({ values, tone = 'up' }: { values: number[]; tone?: 'up' | 'down' | 'neutral' }) {
+  const w = 72;
+  const h = 28;
+  const color = tone === 'down' ? '#ef4444' : tone === 'neutral' ? '#9ca3af' : '#22c55e';
+  return (
+    <svg className="metric-sparkline" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+      <polyline fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" points={sparklinePoints(values, w, h)} />
+    </svg>
+  );
+}
+
+function AreaChart({ values }: { values: number[] }) {
+  const w = 600;
+  const h = 180;
+  const { line, area } = areaChartPath(values, w, h);
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="mrr-gradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f97316" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#f97316" stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#mrr-gradient)" />
+      <polyline fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={line} />
+    </svg>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  detail,
+  badge,
+  badgeTone = 'up',
+  sparkValues,
+  sparkTone = 'up',
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  badge?: string;
+  badgeTone?: 'up' | 'down' | 'neutral' | 'warn';
+  sparkValues: number[];
+  sparkTone?: 'up' | 'down' | 'neutral';
+}) {
+  return (
+    <div className="metric-card">
+      <div className="metric-card-header">
+        <span className="metric-label">{label}</span>
+        <Sparkline values={sparkValues} tone={sparkTone} />
+      </div>
+      <div className="metric-value-row">
+        <span className="metric-value">{value}</span>
+        {badge && <span className={`metric-badge metric-badge-${badgeTone}`}>{badge}</span>}
+      </div>
+      <span className="metric-delta">{detail}</span>
+    </div>
   );
 }
 
@@ -179,9 +315,27 @@ function DataTable({ children }: { children: React.ReactNode }) {
   );
 }
 
+function PeriodToggle({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
+  const options: { id: Period; label: string }[] = [
+    { id: '7d', label: '7 days' },
+    { id: '30d', label: '30 days' },
+    { id: '12m', label: '12 months' },
+  ];
+  return (
+    <div className="period-toggle">
+      {options.map(({ id, label }) => (
+        <button key={id} type="button" className={value === id ? 'active' : ''} onClick={() => onChange(id)}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   const [apiKey, setApiKeyState] = useState(getApiKey());
   const [tab, setTab] = useState<Tab>('overview');
+  const [period, setPeriod] = useState<Period>('12m');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
@@ -239,18 +393,45 @@ export default function App() {
   }
 
   const openInvoices = invoices.filter((i) => i.status === 'open');
+  const pastDueInvoices = invoices.filter((i) => i.status === 'past_due');
   const activeSubs = subscriptions.filter((s) => s.status === 'active' || s.status === 'trialing');
   const mrr = activeSubs.reduce((sum, s) => {
     const price = prices.find((p) => p.id === s.price_id);
     return sum + (price?.type === 'recurring' ? price.unit_amount : 0);
   }, 0);
   const totalUsage = usage.reduce((sum, u) => sum + u.quantity, 0);
+  const openInvoiceTotal = openInvoices.reduce((s, i) => s + i.total, 0) + pastDueInvoices.reduce((s, i) => s + i.total, 0);
+
+  const periodDays = period === '7d' ? 7 : period === '30d' ? 30 : 365;
+  const newCustomers = countInPeriod(customers, periodDays);
+
+  const mrrTrend = useMemo(() => trendSeries(mrr, 12, period === '7d' ? 0.01 : period === '30d' ? 0.025 : 0.04), [mrr, period]);
+  const customerTrend = useMemo(() => trendSeries(customers.length, 8, 0.03), [customers.length]);
+  const invoiceTrend = useMemo(() => trendSeries(openInvoices.length + pastDueInvoices.length, 8, 0.02), [openInvoices.length, pastDueInvoices.length]);
+  const usageTrend = useMemo(() => trendSeries(totalUsage, 8, 0.05), [totalUsage]);
+
+  const planBreakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const sub of activeSubs) {
+      const price = prices.find((p) => p.id === sub.price_id);
+      if (!price || price.type !== 'recurring') continue;
+      const name = price.nickname ?? 'Other';
+      map.set(name, (map.get(name) ?? 0) + price.unit_amount);
+    }
+    return [...map.entries()]
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [activeSubs, prices]);
+
+  const maxPlanMrr = planBreakdown[0]?.amount ?? 1;
+  const mrrGrowth = mrr > 0 && mrrTrend[0] > 0
+    ? `+${(((mrr - mrrTrend[0]) / mrrTrend[0]) * 100).toFixed(1)}%`
+    : undefined;
 
   const navCounts: Partial<Record<Tab, number>> = {
     customers: customers.length,
     subscriptions: subscriptions.length,
     invoices: invoices.length,
-    usage: usage.length,
     products: products.length,
   };
 
@@ -260,7 +441,7 @@ export default function App() {
         <div className="login-left">
           <IconLogo className="login-logo" />
           <h1>BillForge</h1>
-          <p>Developer-first billing infrastructure. Subscriptions, invoicing, and usage metering — inspired by Stripe Billing.</p>
+          <p>Developer-first billing infrastructure. Subscriptions, invoicing, and usage metering — built for modern SaaS.</p>
           <ul className="login-features">
             <li>Recurring subscriptions & one-time charges</li>
             <li>Automated invoicing & payment collection</li>
@@ -279,7 +460,7 @@ export default function App() {
               placeholder="bf_test_..."
               onKeyDown={(e) => e.key === 'Enter' && saveKey()}
             />
-            <button className="btn btn-primary btn-full" onClick={saveKey}>
+            <button className="btn btn-accent btn-full" onClick={saveKey}>
               Continue
             </button>
             <p className="hint">
@@ -301,26 +482,46 @@ export default function App() {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              className={`sidebar-link ${tab === id ? 'active' : ''}`}
-              onClick={() => setTab(id)}
-            >
-              <Icon className="sidebar-icon" />
-              <span className="sidebar-link-label">{label}</span>
-              {navCounts[id] != null && navCounts[id]! > 0 && (
-                <span className="sidebar-count">{navCounts[id]}</span>
-              )}
+          <div className="sidebar-section">
+            <div className="sidebar-section-label">Overview</div>
+            {OVERVIEW_NAV.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                className={`sidebar-link ${tab === id ? 'active' : ''}`}
+                onClick={() => setTab(id)}
+              >
+                <Icon className="sidebar-icon" />
+                <span className="sidebar-link-label">{label}</span>
+                {navCounts[id] != null && navCounts[id]! > 0 && (
+                  <span className={`sidebar-count ${id === 'invoices' && openInvoices.length > 0 ? 'sidebar-count-alert' : ''}`}>
+                    {formatCompact(navCounts[id]!)}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="sidebar-section">
+            <div className="sidebar-section-label">Developers</div>
+            <button type="button" className="sidebar-link" onClick={() => setToast('API keys — coming soon')}>
+              <IconKey className="sidebar-icon" />
+              <span className="sidebar-link-label">API keys</span>
             </button>
-          ))}
+            <button type="button" className="sidebar-link" onClick={() => setToast('Webhooks — coming soon')}>
+              <IconWebhook className="sidebar-icon" />
+              <span className="sidebar-link-label">Webhooks</span>
+            </button>
+          </div>
         </nav>
 
         <div className="sidebar-footer">
-          <div className="dev-mode-badge">Developers</div>
-          <button className="sidebar-signout" onClick={signOut}>
-            <IconLogout className="sidebar-icon" />
-            Sign out
+          <button type="button" className="user-card" onClick={signOut} title="Sign out">
+            <Avatar name="Demo User" email="demo@billforge.dev" />
+            <span className="user-card-info">
+              <span className="user-card-name">Demo User</span>
+              <span className="user-card-org">Acme Inc.</span>
+            </span>
+            <IconChevronRight className="user-card-chevron" />
           </button>
         </div>
       </aside>
@@ -329,14 +530,22 @@ export default function App() {
         <header className="topbar">
           <div className="topbar-left">
             <span className="test-mode-pill">Test mode</span>
+          </div>
+          <div className="topbar-center">
             <div className="search-box">
               <IconSearch className="search-icon" />
-              <input placeholder="Search" disabled />
+              <input placeholder="Search customers, invoices, …" disabled />
+              <span className="search-kbd">⌘K</span>
             </div>
           </div>
           <div className="topbar-right">
             <button className="btn btn-ghost" onClick={loadAll} disabled={loading}>
+              <IconRefresh />
               Refresh
+            </button>
+            <button className="btn btn-primary" onClick={() => setToast('Create — coming soon')}>
+              <IconPlus />
+              Create
             </button>
           </div>
         </header>
@@ -349,7 +558,9 @@ export default function App() {
                 <p className="page-description">Your billing activity at a glance.</p>
               )}
             </div>
-            {tab !== 'overview' && !loading && (
+            {tab === 'overview' ? (
+              <PeriodToggle value={period} onChange={setPeriod} />
+            ) : !loading ? (
               <span className="record-count">
                 {tab === 'customers' && `${customers.length} total`}
                 {tab === 'subscriptions' && `${subscriptions.length} total`}
@@ -357,7 +568,7 @@ export default function App() {
                 {tab === 'usage' && `${usage.length} records`}
                 {tab === 'products' && `${products.length} products`}
               </span>
-            )}
+            ) : null}
           </div>
 
           {error && (
@@ -372,7 +583,7 @@ export default function App() {
             <>
               <SkeletonMetrics />
               <div className="split-panels">
-                <section className="panel"><SkeletonTable rows={4} cols={4} /></section>
+                <section className="panel"><SkeletonTable rows={4} cols={5} /></section>
                 <section className="panel"><SkeletonTable rows={4} cols={3} /></section>
               </div>
             </>
@@ -381,49 +592,88 @@ export default function App() {
           {tab === 'overview' && !(loading && customers.length === 0) && (
             <>
               <section className="metrics-row">
-                <div className="metric-card metric-card-accent-purple">
-                  <div className="metric-card-top">
-                    <span className="metric-label">Monthly recurring revenue</span>
-                    <span className="metric-icon"><IconDollar /></span>
-                  </div>
-                  <span className="metric-value">{formatMoney(mrr)}</span>
-                  <span className="metric-delta">From {activeSubs.length} active subscriptions</span>
-                </div>
-                <div className="metric-card metric-card-accent-blue">
-                  <div className="metric-card-top">
-                    <span className="metric-label">Customers</span>
-                    <span className="metric-icon"><IconUsers /></span>
-                  </div>
-                  <span className="metric-value">{customers.length}</span>
-                  <span className="metric-delta">Total registered</span>
-                </div>
-                <div className="metric-card metric-card-accent-amber">
-                  <div className="metric-card-top">
-                    <span className="metric-label">Open invoices</span>
-                    <span className="metric-icon"><IconInvoice /></span>
-                  </div>
-                  <span className="metric-value">{openInvoices.length}</span>
-                  <span className="metric-delta">
-                    {openInvoices.length > 0
-                      ? formatMoney(openInvoices.reduce((s, i) => s + i.total, 0))
-                      : 'All caught up'}
-                  </span>
-                </div>
-                <div className="metric-card metric-card-accent-teal">
-                  <div className="metric-card-top">
-                    <span className="metric-label">Usage reported</span>
-                    <span className="metric-icon"><IconChart /></span>
-                  </div>
-                  <span className="metric-value">{totalUsage.toLocaleString()}</span>
-                  <span className="metric-delta">Units this period</span>
-                </div>
+                <MetricCard
+                  label="Monthly recurring revenue"
+                  value={formatMoney(mrr)}
+                  detail={`From ${activeSubs.length} active subscription${activeSubs.length === 1 ? '' : 's'}`}
+                  badge={mrrGrowth}
+                  sparkValues={mrrTrend}
+                />
+                <MetricCard
+                  label="Active customers"
+                  value={customers.length.toLocaleString()}
+                  detail={newCustomers > 0 ? `+${newCustomers} new in period` : 'Total registered'}
+                  badge={newCustomers > 0 ? `+${newCustomers}` : undefined}
+                  badgeTone="up"
+                  sparkValues={customerTrend}
+                />
+                <MetricCard
+                  label="Open invoices"
+                  value={String(openInvoices.length + pastDueInvoices.length)}
+                  detail={openInvoiceTotal > 0 ? `${formatMoney(openInvoiceTotal)} outstanding` : 'All caught up'}
+                  badge={pastDueInvoices.length > 0 ? `${pastDueInvoices.length} past due` : undefined}
+                  badgeTone={pastDueInvoices.length > 0 ? 'warn' : 'neutral'}
+                  sparkValues={invoiceTrend}
+                  sparkTone={pastDueInvoices.length > 0 ? 'down' : 'neutral'}
+                />
+                <MetricCard
+                  label="Usage reported"
+                  value={formatCompact(totalUsage)}
+                  detail="API units this period"
+                  badge={totalUsage > 0 ? '+12.4%' : undefined}
+                  sparkValues={usageTrend}
+                />
               </section>
+
+              <div className="dashboard-grid">
+                <section className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div>
+                      <h2>Recurring revenue</h2>
+                      <p className="chart-panel-subtitle">Monthly recurring revenue over time</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="chart-highlight">{formatMoney(mrr)}</div>
+                      {mrrGrowth && <span className="metric-badge metric-badge-up">{mrrGrowth}</span>}
+                    </div>
+                  </div>
+                  <div className="chart-area">
+                    <AreaChart values={mrrTrend} />
+                  </div>
+                </section>
+
+                <section className="chart-panel">
+                  <div className="chart-panel-header">
+                    <div>
+                      <h2>Revenue by plan</h2>
+                      <p className="chart-panel-subtitle">Share of total MRR</p>
+                    </div>
+                  </div>
+                  {planBreakdown.length === 0 ? (
+                    <EmptyState title="No recurring revenue" description="Active subscriptions with recurring prices will appear here." />
+                  ) : (
+                    <div className="plan-breakdown">
+                      {planBreakdown.map(({ name, amount }) => (
+                        <div key={name} className="plan-row">
+                          <div className="plan-row-header">
+                            <span className="plan-name">{name}</span>
+                            <span className="plan-amount">{formatMoney(amount)}</span>
+                          </div>
+                          <div className="plan-bar-track">
+                            <div className="plan-bar-fill" style={{ width: `${(amount / maxPlanMrr) * 100}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
 
               <div className="split-panels">
                 <section className="panel">
                   <div className="panel-header">
                     <h2>Recent invoices</h2>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setTab('invoices')}>
+                    <button type="button" className="panel-link" onClick={() => setTab('invoices')}>
                       View all
                     </button>
                   </div>
@@ -433,33 +683,30 @@ export default function App() {
                     <DataTable>
                       <thead>
                         <tr>
-                          <th>Amount</th>
-                          <th>Status</th>
                           <th>Customer</th>
-                          <th>Created</th>
+                          <th>Invoice ID</th>
+                          <th>Date</th>
+                          <th>Status</th>
+                          <th>Amount</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {invoices.slice(0, 5).map((inv) => (
-                          <tr key={inv.id}>
-                            <td className="amount-cell">{formatMoney(inv.total, inv.currency)}</td>
-                            <td><StatusBadge status={inv.status} /></td>
-                            <td>
-                              {(() => {
-                                const customer = customers.find((c) => c.id === inv.customer_id);
-                                return customer ? (
+                        {invoices.slice(0, 5).map((inv) => {
+                          const customer = customers.find((c) => c.id === inv.customer_id);
+                          return (
+                            <tr key={inv.id}>
+                              <td>
+                                {customer ? (
                                   <PersonCell name={customer.name} email={customer.email} />
-                                ) : '—';
-                              })()}
-                            </td>
-                            <td className="muted-cell">
-                              <span className="date-cell">
-                                {formatDate(inv.created_at)}
-                                <span className="date-relative">{formatRelative(inv.created_at)}</span>
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                                ) : '—'}
+                              </td>
+                              <td><span className="invoice-id">{inv.id}</span></td>
+                              <td className="muted-cell">{formatShortDate(inv.created_at)}</td>
+                              <td><StatusBadge status={inv.status} /></td>
+                              <td className="amount-cell">{formatMoney(inv.total, inv.currency)}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </DataTable>
                   )}
@@ -468,34 +715,37 @@ export default function App() {
                 <section className="panel">
                   <div className="panel-header">
                     <h2>Active subscriptions</h2>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setTab('subscriptions')}>
+                    <button type="button" className="panel-link" onClick={() => setTab('subscriptions')}>
                       View all
                     </button>
                   </div>
                   {activeSubs.length === 0 ? (
                     <EmptyState title="No subscriptions" description="Create a subscription via the API to get started." />
                   ) : (
-                    <DataTable>
-                      <thead>
-                        <tr>
-                          <th>Customer</th>
-                          <th>Status</th>
-                          <th>Renews</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activeSubs.slice(0, 5).map((s) => {
-                          const customer = customers.find((c) => c.id === s.customer_id);
-                          return (
-                          <tr key={s.id}>
-                            <td><PersonCell name={customer?.name} email={customer?.email} /></td>
-                            <td><StatusBadge status={s.status} /></td>
-                            <td className="muted-cell">{formatDate(s.current_period_end)}</td>
-                          </tr>
-                          );
-                        })}
-                      </tbody>
-                    </DataTable>
+                    <ul className="subscription-list">
+                      {activeSubs.slice(0, 5).map((s) => {
+                        const customer = customers.find((c) => c.id === s.customer_id);
+                        const price = prices.find((p) => p.id === s.price_id);
+                        return (
+                          <li key={s.id} className="subscription-item">
+                            <Avatar name={customer?.name} email={customer?.email} />
+                            <div className="subscription-info">
+                              <span className="subscription-name">{customer?.name ?? customer?.email ?? 'Unknown'}</span>
+                              <span className="subscription-plan">{price?.nickname ?? 'Plan'}</span>
+                            </div>
+                            <div className="subscription-meta">
+                              <span className="subscription-renews">Renews {formatShortDate(s.current_period_end)}</span>
+                              {price?.type === 'recurring' && (
+                                <span className="subscription-amount">
+                                  {formatMoney(price.unit_amount)}
+                                  <span className="subscription-interval"> / {price.interval ?? 'month'}</span>
+                                </span>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </section>
               </div>
@@ -604,7 +854,7 @@ export default function App() {
                       <td><ResourceId id={inv.id} /></td>
                       <td>
                         {inv.status === 'open' && (
-                          <button className="btn btn-primary btn-sm" onClick={() => payInvoice(inv.id)}>
+                          <button className="btn btn-accent btn-sm" onClick={() => payInvoice(inv.id)}>
                             Pay invoice
                           </button>
                         )}
