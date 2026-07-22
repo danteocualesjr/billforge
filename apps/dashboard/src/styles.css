@@ -76,7 +76,33 @@ body {
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.75);
   max-width: 400px;
+  margin: 0 0 32px;
+}
+
+.login-features {
+  list-style: none;
+  padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9375rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.login-features li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #635bff;
+  flex-shrink: 0;
 }
 
 .login-right {
@@ -206,6 +232,26 @@ body {
   transition: background 0.12s, color 0.12s;
 }
 
+.sidebar-link-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-count {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--border-light);
+  padding: 1px 7px;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+
+.sidebar-link.active .sidebar-count {
+  background: rgba(99, 91, 255, 0.15);
+  color: var(--accent);
+}
+
 .sidebar-link:hover {
   background: var(--border-light);
   color: var(--text);
@@ -227,6 +273,9 @@ body {
 .sidebar-footer {
   padding: 16px 20px;
   border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .dev-mode-badge {
@@ -235,6 +284,29 @@ body {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.sidebar-signout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+
+.sidebar-signout:hover {
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
 .main {
@@ -397,6 +469,59 @@ body {
   border-radius: var(--radius-lg);
   padding: 20px 24px;
   box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.metric-card-accent-purple::before { background: var(--accent); }
+.metric-card-accent-blue::before { background: #0073e6; }
+.metric-card-accent-amber::before { background: var(--test-mode); }
+.metric-card-accent-teal::before { background: #0d9488; }
+
+.metric-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.metric-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.metric-card-accent-purple .metric-icon {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.metric-card-accent-blue .metric-icon {
+  background: #e0f0ff;
+  color: #0073e6;
+}
+
+.metric-card-accent-amber .metric-icon {
+  background: var(--test-mode-bg);
+  color: var(--test-mode);
+}
+
+.metric-card-accent-teal .metric-icon {
+  background: #ccfbf1;
+  color: #0d9488;
 }
 
 .metric-label {
@@ -404,7 +529,6 @@ body {
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--muted);
-  margin-bottom: 8px;
 }
 
 .metric-value {
@@ -506,10 +630,61 @@ tbody tr:hover {
 }
 
 .resource-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 0.8125rem;
   color: var(--accent);
-  cursor: default;
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.resource-id span {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.resource-id:hover {
+  background: var(--accent-light);
+}
+
+.resource-id svg {
+  opacity: 0;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
+}
+
+.resource-id:hover svg,
+.resource-id:focus svg {
+  opacity: 0.6;
+}
+
+/* ── Avatars ── */
+
+.person-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-light), #e0e8ff);
+  color: var(--accent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 /* ── Badges ── */

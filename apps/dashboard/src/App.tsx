@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react';
 import { api, getApiKey, setApiKey } from './api';
 import {
   IconChart,
+  IconCheck,
+  IconCopy,
+  IconDollar,
   IconHome,
   IconInvoice,
   IconLogo,
+  IconLogout,
   IconProduct,
   IconRefresh,
   IconSearch,
@@ -50,8 +54,46 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`badge badge-${status}`}>{status.replace('_', ' ')}</span>;
 }
 
+function initials(name?: string, email?: string) {
+  const source = name?.trim() || email?.trim() || '?';
+  const parts = source.split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return source.slice(0, 2).toUpperCase();
+}
+
+function Avatar({ name, email }: { name?: string; email?: string }) {
+  return (
+    <span className="avatar" aria-hidden="true">
+      {initials(name, email)}
+    </span>
+  );
+}
+
+function PersonCell({ name, email }: { name?: string; email?: string }) {
+  const label = name ?? email ?? '—';
+  return (
+    <span className="person-cell">
+      <Avatar name={name} email={email} />
+      <span>{label}</span>
+    </span>
+  );
+}
+
 function ResourceId({ id }: { id: string }) {
-  return <span className="resource-id">{id}</span>;
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    await navigator.clipboard.writeText(id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <button type="button" className="resource-id" onClick={copy} title="Copy ID">
+      <span>{id}</span>
+      {copied ? <IconCheck /> : <IconCopy />}
+    </button>
+  );
 }
 
 function EmptyState({ title, description }: { title: string; description: string }) {
@@ -121,6 +163,11 @@ export default function App() {
     loadAll();
   }
 
+  function signOut() {
+    setApiKey('');
+    setApiKeyState('');
+  }
+
   async function payInvoice(id: string) {
     await api.payInvoice(id);
     loadAll();
@@ -134,6 +181,14 @@ export default function App() {
   }, 0);
   const totalUsage = usage.reduce((sum, u) => sum + u.quantity, 0);
 
+  const navCounts: Partial<Record<Tab, number>> = {
+    customers: customers.length,
+    subscriptions: subscriptions.length,
+    invoices: invoices.length,
+    usage: usage.length,
+    products: products.length,
+  };
+
   if (!getApiKey()) {
     return (
       <div className="login-layout">
@@ -141,6 +196,11 @@ export default function App() {
           <IconLogo className="login-logo" />
           <h1>BillForge</h1>
           <p>Developer-first billing infrastructure. Subscriptions, invoicing, and usage metering — inspired by Stripe Billing.</p>
+          <ul className="login-features">
+            <li>Recurring subscriptions & one-time charges</li>
+            <li>Automated invoicing & payment collection</li>
+            <li>Usage-based metering with included units</li>
+          </ul>
         </div>
         <div className="login-right">
           <div className="login-card">
@@ -182,13 +242,20 @@ export default function App() {
               onClick={() => setTab(id)}
             >
               <Icon className="sidebar-icon" />
-              {label}
+              <span className="sidebar-link-label">{label}</span>
+              {navCounts[id] != null && navCounts[id]! > 0 && (
+                <span className="sidebar-count">{navCounts[id]}</span>
+              )}
             </button>
           ))}
         </nav>
 
         <div className="sidebar-footer">
           <div className="dev-mode-badge">Developers</div>
+          <button className="sidebar-signout" onClick={signOut}>
+            <IconLogout className="sidebar-icon" />
+            Sign out
+          </button>
         </div>
       </aside>
 
@@ -227,18 +294,27 @@ export default function App() {
           {tab === 'overview' && (
             <>
               <section className="metrics-row">
-                <div className="metric-card">
-                  <span className="metric-label">Monthly recurring revenue</span>
+                <div className="metric-card metric-card-accent-purple">
+                  <div className="metric-card-top">
+                    <span className="metric-label">Monthly recurring revenue</span>
+                    <span className="metric-icon"><IconDollar /></span>
+                  </div>
                   <span className="metric-value">{formatMoney(mrr)}</span>
                   <span className="metric-delta">From {activeSubs.length} active subscriptions</span>
                 </div>
-                <div className="metric-card">
-                  <span className="metric-label">Customers</span>
+                <div className="metric-card metric-card-accent-blue">
+                  <div className="metric-card-top">
+                    <span className="metric-label">Customers</span>
+                    <span className="metric-icon"><IconUsers /></span>
+                  </div>
                   <span className="metric-value">{customers.length}</span>
                   <span className="metric-delta">Total registered</span>
                 </div>
-                <div className="metric-card">
-                  <span className="metric-label">Open invoices</span>
+                <div className="metric-card metric-card-accent-amber">
+                  <div className="metric-card-top">
+                    <span className="metric-label">Open invoices</span>
+                    <span className="metric-icon"><IconInvoice /></span>
+                  </div>
                   <span className="metric-value">{openInvoices.length}</span>
                   <span className="metric-delta">
                     {openInvoices.length > 0
@@ -246,8 +322,11 @@ export default function App() {
                       : 'All caught up'}
                   </span>
                 </div>
-                <div className="metric-card">
-                  <span className="metric-label">Usage reported</span>
+                <div className="metric-card metric-card-accent-teal">
+                  <div className="metric-card-top">
+                    <span className="metric-label">Usage reported</span>
+                    <span className="metric-icon"><IconChart /></span>
+                  </div>
                   <span className="metric-value">{totalUsage.toLocaleString()}</span>
                   <span className="metric-delta">Units this period</span>
                 </div>
@@ -278,7 +357,14 @@ export default function App() {
                           <tr key={inv.id}>
                             <td className="amount-cell">{formatMoney(inv.total, inv.currency)}</td>
                             <td><StatusBadge status={inv.status} /></td>
-                            <td>{customers.find((c) => c.id === inv.customer_id)?.email ?? '—'}</td>
+                            <td>
+                              {(() => {
+                                const customer = customers.find((c) => c.id === inv.customer_id);
+                                return customer ? (
+                                  <PersonCell name={customer.name} email={customer.email} />
+                                ) : '—';
+                              })()}
+                            </td>
                             <td className="muted-cell">{formatDate(inv.created_at)}</td>
                           </tr>
                         ))}
@@ -306,13 +392,16 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody>
-                        {activeSubs.slice(0, 5).map((s) => (
+                        {activeSubs.slice(0, 5).map((s) => {
+                          const customer = customers.find((c) => c.id === s.customer_id);
+                          return (
                           <tr key={s.id}>
-                            <td>{customers.find((c) => c.id === s.customer_id)?.name ?? '—'}</td>
+                            <td><PersonCell name={customer?.name} email={customer?.email} /></td>
                             <td><StatusBadge status={s.status} /></td>
                             <td className="muted-cell">{formatDate(s.current_period_end)}</td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </DataTable>
                   )}
@@ -337,7 +426,7 @@ export default function App() {
                 <tbody>
                   {customers.map((c) => (
                     <tr key={c.id}>
-                      <td className="primary-cell">{c.name}</td>
+                      <td className="primary-cell"><PersonCell name={c.name} email={c.email} /></td>
                       <td>{c.email}</td>
                       <td><ResourceId id={c.id} /></td>
                       <td className="muted-cell">{formatDate(c.created_at)}</td>
@@ -368,7 +457,7 @@ export default function App() {
                     const customer = customers.find((c) => c.id === s.customer_id);
                     return (
                       <tr key={s.id}>
-                        <td className="primary-cell">{customer?.name ?? '—'}</td>
+                        <td className="primary-cell"><PersonCell name={customer?.name} email={customer?.email} /></td>
                         <td>{price?.nickname ?? s.price_id}</td>
                         <td><StatusBadge status={s.status} /></td>
                         <td className="muted-cell">
@@ -403,7 +492,14 @@ export default function App() {
                     <tr key={inv.id}>
                       <td className="amount-cell">{formatMoney(inv.total, inv.currency)}</td>
                       <td><StatusBadge status={inv.status} /></td>
-                      <td>{customers.find((c) => c.id === inv.customer_id)?.email ?? '—'}</td>
+                      <td>
+                        {(() => {
+                          const customer = customers.find((c) => c.id === inv.customer_id);
+                          return customer ? (
+                            <PersonCell name={customer.name} email={customer.email} />
+                          ) : '—';
+                        })()}
+                      </td>
                       <td className="muted-cell">
                         {formatDate(inv.period_start)} – {formatDate(inv.period_end)}
                       </td>

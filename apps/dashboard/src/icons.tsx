@@ -64,3 +64,35 @@ export function IconLogo({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconCopy({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+      <path d="M4 2h7a1 1 0 011 1v1h1a1 1 0 011 1v7a1 1 0 01-1 1H6a1 1 0 01-1-1v-1H4a1 1 0 01-1-1V3a1 1 0 011-1zm1 2v7h7V4H5zm-2 2h1v5a1 1 0 001 1h5v1H3a1 1 0 01-1-1V4z" />
+    </svg>
+  );
+}
+
+export function IconCheck({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+      <path d="M6.5 11.5L3 8l1.1-1.1 2.4 2.4 5.4-5.4L13 5.1 6.5 11.5z" />
+    </svg>
+  );
+}
+
+export function IconDollar({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="currentColor" width="16" height="16">
+      <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zM8.75 4v1.1c1.1.2 2 .8 2 1.9 0 1.1-.9 1.7-2.2 2-1.1.3-1.3.5-1.3 1 0 .5.4.9 1.1.9.6 0 1.1-.3 1.4-.8l1.2.7c-.5.8-1.3 1.2-2.3 1.3V12h-1.5v-1.1c-1.1-.2-2-.8-2-1.9 0-1.1.9-1.7 2.2-2 1.1-.3 1.3-.5 1.3-1 0-.5-.4-.9-1.1-.9-.6 0-1.1.3-1.4.8L5.6 6.3C6.1 5.5 6.9 5.1 7.75 5V4h1z" />
+    </svg>
+  );
+}
+
+export function IconLogout({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="currentColor" width="16" height="16">
+      <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3v1.5H3A2.5 2.5 0 010 13V3A2.5 2.5 0 012.5.5H6V2zm7.8 3.2l-1.1 1.1L13.4 7H6v2h7.4l-.7.7 1.1 1.1L16 8l-2.2-2.8z" />
+    </svg>
+  );
+}
