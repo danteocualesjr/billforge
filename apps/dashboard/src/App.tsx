@@ -147,7 +147,12 @@ function countInPeriod(items: { created_at: string }[], days: number) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  return <span className={`badge badge-${status}`}>{status.replace('_', ' ')}</span>;
+  return (
+    <span className={`badge badge-${status}`}>
+      <span className="badge-dot" aria-hidden="true" />
+      {status.replace('_', ' ')}
+    </span>
+  );
 }
 
 function Avatar({ name, email, small }: { name?: string; email?: string; small?: boolean }) {
@@ -779,7 +784,12 @@ export default function App() {
                         <div key={name} className="plan-row">
                           <div className="plan-row-header">
                             <span className="plan-name">{name}</span>
-                            <span className="plan-amount">{formatMoney(amount)}</span>
+                            <span className="plan-amount-group">
+                              <span className="plan-amount">{formatMoney(amount)}</span>
+                              {mrr > 0 && (
+                                <span className="plan-share">{Math.round((amount / mrr) * 100)}%</span>
+                              )}
+                            </span>
                           </div>
                           <div className="plan-bar-track">
                             <div className="plan-bar-fill" style={{ width: `${(amount / maxPlanMrr) * 100}%` }} />
@@ -853,10 +863,13 @@ export default function App() {
                             <Avatar name={customer?.name} email={customer?.email} />
                             <div className="subscription-info">
                               <span className="subscription-name">{customer?.name ?? customer?.email ?? 'Unknown'}</span>
-                              <span className="subscription-plan">{price?.nickname ?? 'Plan'}</span>
+                              <span className="subscription-plan">
+                                {price?.nickname ?? 'Plan'}
+                                <span className="subscription-dot" aria-hidden="true">·</span>
+                                renews {formatShortDate(s.current_period_end)}
+                              </span>
                             </div>
                             <div className="subscription-meta">
-                              <span className="subscription-renews">Renews {formatShortDate(s.current_period_end)}</span>
                               {price?.type === 'recurring' && (
                                 <span className="subscription-amount">
                                   {formatMoney(price.unit_amount)}
