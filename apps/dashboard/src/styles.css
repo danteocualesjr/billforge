@@ -630,7 +630,7 @@ body {
 
 .period-toggle {
   display: inline-flex;
-  background: var(--surface);
+  background: #eef0f3;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 3px;
@@ -742,6 +742,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.metric-card:hover {
+  border-color: #d1d5db;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .metric-card-header {
@@ -859,6 +866,30 @@ body {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-panel-summary {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.chart-comparison {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.chart-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 4px;
+  font-size: 0.6875rem;
+  color: #9ca3af;
   font-variant-numeric: tabular-nums;
 }
 

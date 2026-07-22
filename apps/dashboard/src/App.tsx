@@ -188,14 +188,19 @@ function AreaChart({ values }: { values: number[] }) {
   const w = 600;
   const h = 180;
   const { line, area } = areaChartPath(values, w, h);
+  const gridLines = [0.2, 0.45, 0.7].map((pct) => h - 8 - pct * (h - 16));
+
   return (
     <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
       <defs>
         <linearGradient id="mrr-gradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#f97316" stopOpacity="0.25" />
+          <stop offset="0%" stopColor="#f97316" stopOpacity="0.28" />
           <stop offset="100%" stopColor="#f97316" stopOpacity="0.02" />
         </linearGradient>
       </defs>
+      {gridLines.map((y, i) => (
+        <line key={i} x1="0" y1={y} x2={w} y2={y} stroke="#eef0f3" strokeWidth="1" />
+      ))}
       <path d={area} fill="url(#mrr-gradient)" />
       <polyline fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={line} />
     </svg>
@@ -743,13 +748,19 @@ export default function App() {
                       <h2>Recurring revenue</h2>
                       <p className="chart-panel-subtitle">Monthly recurring revenue over time</p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
+                    <div className="chart-panel-summary">
                       <div className="chart-highlight">{formatMoney(mrr)}</div>
                       {mrrGrowth && <span className="metric-badge metric-badge-up">{mrrGrowth}</span>}
+                      <p className="chart-comparison">vs previous month</p>
                     </div>
                   </div>
                   <div className="chart-area">
                     <AreaChart values={mrrTrend} />
+                  </div>
+                  <div className="chart-axis">
+                    {['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'].map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
                   </div>
                 </section>
 
