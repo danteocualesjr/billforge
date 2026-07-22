@@ -385,6 +385,10 @@ body {
 }
 
 .page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 28px;
 }
 
@@ -393,6 +397,17 @@ body {
   font-weight: 600;
   margin: 0;
   letter-spacing: -0.03em;
+}
+
+.record-count {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--border-light);
+  padding: 6px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  margin-top: 6px;
 }
 
 .page-description {
@@ -629,6 +644,17 @@ tbody tr:hover {
   color: var(--muted);
 }
 
+.date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.date-relative {
+  font-size: 0.75rem;
+  color: #aab0bc;
+}
+
 .resource-id {
   display: inline-flex;
   align-items: center;
@@ -740,6 +766,13 @@ tbody tr:hover {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.product-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: #d0d7de;
+  transform: translateY(-1px);
 }
 
 .product-card-header {
@@ -858,6 +891,84 @@ tbody tr:hover {
 @keyframes shimmer {
   0% { background-position: 100% 0; }
   100% { background-position: -100% 0; }
+}
+
+/* ── Skeleton loading ── */
+
+.skeleton {
+  background: linear-gradient(90deg, var(--border-light) 25%, #eef1f5 50%, var(--border-light) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 4px;
+}
+
+.skeleton-text {
+  height: 12px;
+}
+
+.skeleton-text.xs { width: 48px; height: 10px; }
+.skeleton-text.sm { width: 72%; max-width: 120px; }
+.skeleton-text.md { width: 55%; max-width: 180px; height: 16px; }
+.skeleton-text.lg { width: 40%; max-width: 100px; height: 28px; margin: 8px 0; }
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-card .skeleton-text.lg {
+  margin: 4px 0;
+}
+
+/* ── Toast ── */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--text);
+  color: white;
+  padding: 12px 18px;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  animation: toast-in 0.25s ease;
+}
+
+.toast-icon {
+  color: #6ee7a0;
+  flex-shrink: 0;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Content fade-in ── */
+
+.content > section,
+.content > .table-card,
+.content > .product-grid,
+.content > .split-panels {
+  animation: fade-in 0.3s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Responsive ── */

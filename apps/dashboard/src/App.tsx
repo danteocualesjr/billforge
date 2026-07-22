@@ -50,6 +50,16 @@ function formatDate(iso: string) {
   }).format(new Date(iso));
 }
 
+function formatRelative(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  return formatDate(iso);
+}
+
 function StatusBadge({ status }: { status: string }) {
   return <span className={`badge badge-${status}`}>{status.replace('_', ' ')}</span>;
 }
@@ -108,6 +118,59 @@ function EmptyState({ title, description }: { title: string; description: string
   );
 }
 
+function SkeletonMetrics() {
+  return (
+    <section className="metrics-row">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="metric-card skeleton-card">
+          <div className="skeleton skeleton-text sm" />
+          <div className="skeleton skeleton-text lg" />
+          <div className="skeleton skeleton-text sm" />
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function SkeletonTable({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
+  return (
+    <div className="table-card">
+      <table>
+        <thead>
+          <tr>
+            {Array.from({ length: cols }).map((_, i) => (
+              <th key={i}><div className="skeleton skeleton-text xs" /></th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }).map((_, r) => (
+            <tr key={r}>
+              {Array.from({ length: cols }).map((_, c) => (
+                <td key={c}><div className="skeleton skeleton-text sm" /></td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 3000);
+    return () => clearTimeout(t);
+  }, [message, onDismiss]);
+
+  return (
+    <div className="toast" role="status">
+      <IconCheck className="toast-icon" />
+      {message}
+    </div>
+  );
+}
+
 function DataTable({ children }: { children: React.ReactNode }) {
   return (
     <div className="table-card">
@@ -127,6 +190,7 @@ export default function App() {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [usage, setUsage] = useState<any[]>([]);
+  const [toast, setToast] = useState('');
 
   async function loadAll() {
     if (!apiKey) return;
@@ -170,6 +234,7 @@ export default function App() {
 
   async function payInvoice(id: string) {
     await api.payInvoice(id);
+    setToast('Invoice marked as paid');
     loadAll();
   }
 
@@ -228,6 +293,7 @@ export default function App() {
 
   return (
     <div className="shell">
+      {toast && <Toast message={toast} onDismiss={() => setToast('')} />}
       <aside className="sidebar">
         <div className="sidebar-brand">
           <IconLogo />
@@ -277,9 +343,20 @@ export default function App() {
 
         <div className="content">
           <div className="page-header">
-            <h1>{PAGE_TITLES[tab]}</h1>
-            {tab === 'overview' && (
-              <p className="page-description">Your billing activity at a glance.</p>
+            <div>
+              <h1>{PAGE_TITLES[tab]}</h1>
+              {tab === 'overview' && (
+                <p className="page-description">Your billing activity at a glance.</p>
+              )}
+            </div>
+            {tab !== 'overview' && !loading && (
+              <span className="record-count">
+                {tab === 'customers' && `${customers.length} total`}
+                {tab === 'subscriptions' && `${subscriptions.length} total`}
+                {tab === 'invoices' && `${invoices.length} total`}
+                {tab === 'usage' && `${usage.length} records`}
+                {tab === 'products' && `${products.length} products`}
+              </span>
             )}
           </div>
 
@@ -291,7 +368,17 @@ export default function App() {
 
           {loading && <div className="loading-bar" />}
 
-          {tab === 'overview' && (
+          {tab === 'overview' && loading && customers.length === 0 && (
+            <>
+              <SkeletonMetrics />
+              <div className="split-panels">
+                <section className="panel"><SkeletonTable rows={4} cols={4} /></section>
+                <section className="panel"><SkeletonTable rows={4} cols={3} /></section>
+              </div>
+            </>
+          )}
+
+          {tab === 'overview' && !(loading && customers.length === 0) && (
             <>
               <section className="metrics-row">
                 <div className="metric-card metric-card-accent-purple">
@@ -365,7 +452,12 @@ export default function App() {
                                 ) : '—';
                               })()}
                             </td>
-                            <td className="muted-cell">{formatDate(inv.created_at)}</td>
+                            <td className="muted-cell">
+                              <span className="date-cell">
+                                {formatDate(inv.created_at)}
+                                <span className="date-relative">{formatRelative(inv.created_at)}</span>
+                              </span>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -411,7 +503,9 @@ export default function App() {
           )}
 
           {tab === 'customers' && (
-            customers.length === 0 ? (
+            loading && customers.length === 0 ? (
+              <SkeletonTable rows={6} cols={4} />
+            ) : customers.length === 0 ? (
               <EmptyState title="No customers" description="Customers are created via POST /v1/customers." />
             ) : (
               <DataTable>
@@ -438,7 +532,9 @@ export default function App() {
           )}
 
           {tab === 'subscriptions' && (
-            subscriptions.length === 0 ? (
+            loading && subscriptions.length === 0 ? (
+              <SkeletonTable rows={6} cols={5} />
+            ) : subscriptions.length === 0 ? (
               <EmptyState title="No subscriptions" description="Subscriptions link customers to pricing plans." />
             ) : (
               <DataTable>
@@ -473,7 +569,9 @@ export default function App() {
           )}
 
           {tab === 'invoices' && (
-            invoices.length === 0 ? (
+            loading && invoices.length === 0 ? (
+              <SkeletonTable rows={6} cols={6} />
+            ) : invoices.length === 0 ? (
               <EmptyState title="No invoices" description="Invoices are auto-generated when billing periods end." />
             ) : (
               <DataTable>
@@ -519,7 +617,9 @@ export default function App() {
           )}
 
           {tab === 'usage' && (
-            usage.length === 0 ? (
+            loading && usage.length === 0 ? (
+              <SkeletonTable rows={6} cols={4} />
+            ) : usage.length === 0 ? (
               <EmptyState title="No usage records" description="Report usage via POST /v1/usage_records." />
             ) : (
               <DataTable>
@@ -547,7 +647,17 @@ export default function App() {
 
           {tab === 'products' && (
             <>
-              {products.length === 0 ? (
+              {loading && products.length === 0 ? (
+                <div className="product-grid">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="product-card skeleton-card">
+                      <div className="skeleton skeleton-text md" />
+                      <div className="skeleton skeleton-text sm" />
+                      <div className="skeleton skeleton-text lg" style={{ marginTop: 16 }} />
+                    </div>
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
                 <EmptyState title="No products" description="Products are the goods or services you offer." />
               ) : (
                 <div className="product-grid">
