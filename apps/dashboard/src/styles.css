@@ -16,6 +16,7 @@
   --sidebar-hover: rgba(255, 255, 255, 0.06);
   --sidebar-active: rgba(255, 255, 255, 0.08);
   --sidebar-width: 248px;
+  --sidebar-width-collapsed: 72px;
   --topbar-height: 60px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
@@ -187,10 +188,15 @@ body {
 .shell {
   display: flex;
   min-height: 100vh;
+  --sidebar-current-width: var(--sidebar-width);
+}
+
+.shell.sidebar-collapsed {
+  --sidebar-current-width: var(--sidebar-width-collapsed);
 }
 
 .sidebar {
-  width: var(--sidebar-width);
+  width: var(--sidebar-current-width);
   background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
@@ -199,17 +205,55 @@ body {
   left: 0;
   bottom: 0;
   z-index: 10;
+  transition: width 0.22s ease;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 18px 14px 14px 16px;
+  flex-shrink: 0;
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 22px 20px 20px;
+  min-width: 0;
   font-weight: 700;
   font-size: 1.0625rem;
   color: white;
   letter-spacing: -0.02em;
+}
+
+.sidebar-brand-text {
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 0.15s ease, width 0.22s ease;
+}
+
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #9ca3af;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .sidebar-nav {
@@ -252,13 +296,16 @@ body {
   cursor: pointer;
   font-family: inherit;
   text-align: left;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, padding 0.22s ease;
   position: relative;
 }
 
 .sidebar-link-label {
   flex: 1;
   min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 0.15s ease;
 }
 
 .sidebar-count {
@@ -361,6 +408,49 @@ body {
 .user-card-chevron {
   color: #6b7280;
   flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+
+.shell.sidebar-collapsed .sidebar-header {
+  flex-direction: column;
+  padding: 18px 12px 12px;
+  gap: 12px;
+}
+
+.shell.sidebar-collapsed .sidebar-brand {
+  justify-content: center;
+}
+
+.shell.sidebar-collapsed .sidebar-brand-text,
+.shell.sidebar-collapsed .sidebar-section-label,
+.shell.sidebar-collapsed .sidebar-link-label,
+.shell.sidebar-collapsed .sidebar-count,
+.shell.sidebar-collapsed .user-card-info,
+.shell.sidebar-collapsed .user-card-chevron {
+  display: none;
+}
+
+.shell.sidebar-collapsed .sidebar-nav {
+  padding-inline: 10px;
+}
+
+.shell.sidebar-collapsed .sidebar-link {
+  justify-content: center;
+  padding-inline: 10px;
+  gap: 0;
+}
+
+.shell.sidebar-collapsed .sidebar-footer {
+  padding-inline: 10px;
+}
+
+.shell.sidebar-collapsed .user-card {
+  justify-content: center;
+  padding-inline: 10px;
+}
+
+.shell.sidebar-collapsed .sidebar-link.active::before {
+  left: 4px;
 }
 
 .avatar {
@@ -386,10 +476,11 @@ body {
 
 .main {
   flex: 1;
-  margin-left: var(--sidebar-width);
+  margin-left: var(--sidebar-current-width);
   display: flex;
   flex-direction: column;
   min-width: 0;
+  transition: margin-left 0.22s ease;
 }
 
 /* ── Topbar ── */

@@ -3,6 +3,7 @@ import { api, getApiKey, setApiKey } from './api';
 import {
   IconChart,
   IconCheck,
+  IconChevronLeft,
   IconChevronRight,
   IconCopy,
   IconHome,
@@ -19,6 +20,12 @@ import {
 
 type Tab = 'overview' | 'customers' | 'subscriptions' | 'invoices' | 'usage' | 'products';
 type Period = '7d' | '30d' | '12m';
+
+const SIDEBAR_COLLAPSED_KEY = 'billforge_sidebar_collapsed';
+
+function getSidebarCollapsed() {
+  return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+}
 
 const OVERVIEW_NAV: { id: Tab; label: string; icon: typeof IconHome }[] = [
   { id: 'overview', label: 'Home', icon: IconHome },
@@ -345,6 +352,7 @@ export default function App() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [usage, setUsage] = useState<any[]>([]);
   const [toast, setToast] = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(getSidebarCollapsed);
 
   async function loadAll() {
     if (!apiKey) return;
@@ -384,6 +392,14 @@ export default function App() {
   function signOut() {
     setApiKey('');
     setApiKeyState('');
+  }
+
+  function toggleSidebar() {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+      return next;
+    });
   }
 
   async function payInvoice(id: string) {
@@ -473,12 +489,23 @@ export default function App() {
   }
 
   return (
-    <div className="shell">
+    <div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       {toast && <Toast message={toast} onDismiss={() => setToast('')} />}
       <aside className="sidebar">
-        <div className="sidebar-brand">
-          <IconLogo />
-          <span>BillForge</span>
+        <div className="sidebar-header">
+          <div className="sidebar-brand">
+            <IconLogo />
+            <span className="sidebar-brand-text">BillForge</span>
+          </div>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? <IconChevronRight /> : <IconChevronLeft />}
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -489,6 +516,7 @@ export default function App() {
                 key={id}
                 className={`sidebar-link ${tab === id ? 'active' : ''}`}
                 onClick={() => setTab(id)}
+                title={label}
               >
                 <Icon className="sidebar-icon" />
                 <span className="sidebar-link-label">{label}</span>
@@ -503,11 +531,11 @@ export default function App() {
 
           <div className="sidebar-section">
             <div className="sidebar-section-label">Developers</div>
-            <button type="button" className="sidebar-link" onClick={() => setToast('API keys — coming soon')}>
+            <button type="button" className="sidebar-link" title="API keys" onClick={() => setToast('API keys — coming soon')}>
               <IconKey className="sidebar-icon" />
               <span className="sidebar-link-label">API keys</span>
             </button>
-            <button type="button" className="sidebar-link" onClick={() => setToast('Webhooks — coming soon')}>
+            <button type="button" className="sidebar-link" title="Webhooks" onClick={() => setToast('Webhooks — coming soon')}>
               <IconWebhook className="sidebar-icon" />
               <span className="sidebar-link-label">Webhooks</span>
             </button>
