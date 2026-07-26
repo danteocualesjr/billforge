@@ -957,7 +957,25 @@ body {
   gap: 8px;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
   animation: metric-in 0.35s ease both;
+  position: relative;
+  overflow: hidden;
 }
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--metric-accent, var(--accent));
+  opacity: 0.85;
+}
+
+.metric-card-orange { --metric-accent: #f97316; }
+.metric-card-blue { --metric-accent: #2563eb; }
+.metric-card-green { --metric-accent: #059669; }
+.metric-card-purple { --metric-accent: #7c3aed; }
 
 @keyframes metric-in {
   from {

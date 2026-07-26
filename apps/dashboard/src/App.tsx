@@ -246,7 +246,7 @@ function MetricCard({
   iconTone?: 'orange' | 'green' | 'blue' | 'purple';
 }) {
   return (
-    <div className="metric-card">
+    <div className={`metric-card metric-card-${iconTone}`}>
       <div className="metric-card-header">
         <span className="metric-label-row">
           {Icon && (
