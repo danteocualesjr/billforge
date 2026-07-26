@@ -25,6 +25,7 @@ import {
 
 type Tab = 'overview' | 'customers' | 'subscriptions' | 'invoices' | 'usage' | 'products';
 type Period = '7d' | '30d' | '12m';
+type InvoiceFilter = 'all' | 'open' | 'paid' | 'past_due';
 
 const SIDEBAR_COLLAPSED_KEY = 'billforge_sidebar_collapsed';
 const MOCK_MODE_KEY = 'billforge_mock_mode';
@@ -380,11 +381,38 @@ function PeriodToggle({ value, onChange }: { value: Period; onChange: (p: Period
   );
 }
 
+function FilterPills<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { id: T; label: string; count?: number }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="filter-pills">
+      {options.map(({ id, label, count }) => (
+        <button
+          key={id}
+          type="button"
+          className={`filter-pill${value === id ? ' active' : ''}`}
+          onClick={() => onChange(id)}
+        >
+          {label}
+          {count != null && count > 0 && <span className="filter-pill-count">{count}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   const [apiKey, setApiKeyState] = useState(getApiKey() || DEMO_API_KEY);
   const [useMock, setUseMock] = useState(() => localStorage.getItem(MOCK_MODE_KEY) === '1');
   const [tab, setTab] = useState<Tab>('overview');
   const [period, setPeriod] = useState<Period>('12m');
+  const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
@@ -519,6 +547,10 @@ export default function App() {
 
   const openInvoices = invoices.filter((i) => i.status === 'open');
   const pastDueInvoices = invoices.filter((i) => i.status === 'past_due');
+  const paidInvoices = invoices.filter((i) => i.status === 'paid');
+  const filteredInvoices = invoiceFilter === 'all'
+    ? invoices
+    : invoices.filter((i) => i.status === invoiceFilter);
   const activeSubs = subscriptions.filter((s) => s.status === 'active' || s.status === 'trialing');
   const mrr = activeSubs.reduce((sum, s) => {
     const price = prices.find((p) => p.id === s.price_id);
@@ -1028,7 +1060,29 @@ export default function App() {
             ) : invoices.length === 0 ? (
               <EmptyState title="No invoices" description="Invoices are auto-generated when billing periods end." />
             ) : (
-              <DataTable>
+              <>
+                <div className="table-toolbar">
+                  <FilterPills
+                    value={invoiceFilter}
+                    onChange={setInvoiceFilter}
+                    options={[
+                      { id: 'all', label: 'All', count: invoices.length },
+                      { id: 'open', label: 'Open', count: openInvoices.length },
+                      { id: 'paid', label: 'Paid', count: paidInvoices.length },
+                      { id: 'past_due', label: 'Past due', count: pastDueInvoices.length },
+                    ]}
+                  />
+                  <span className="table-toolbar-meta">
+                    {filteredInvoices.length} of {invoices.length} shown
+                  </span>
+                </div>
+                {filteredInvoices.length === 0 ? (
+                  <EmptyState
+                    title="No matching invoices"
+                    description={`No invoices with status "${invoiceFilter.replace('_', ' ')}".`}
+                  />
+                ) : (
+                  <DataTable>
                 <thead>
                   <tr>
                     <th>Total</th>
@@ -1040,7 +1094,7 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((inv) => (
+                  {filteredInvoices.map((inv) => (
                     <tr key={inv.id}>
                       <td className="amount-cell">{formatMoney(inv.total, inv.currency)}</td>
                       <td><StatusBadge status={inv.status} /></td>
@@ -1066,7 +1120,9 @@ export default function App() {
                     </tr>
                   ))}
                 </tbody>
-              </DataTable>
+                  </DataTable>
+                )}
+              </>
             )
           )}
 
