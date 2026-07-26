@@ -139,7 +139,8 @@ function areaChartPath(values: number[], width: number, height: number) {
   });
   const line = coords.map(([x, y]) => `${x},${y}`).join(' ');
   const area = `M0,${height} L${coords.map(([x, y]) => `${x},${y}`).join(' L')} L${width},${height} Z`;
-  return { line, area };
+  const last = coords[coords.length - 1];
+  return { line, area, lastPoint: last ? { x: last[0], y: last[1] } : null };
 }
 
 function countInPeriod(items: { created_at: string }[], days: number) {
@@ -193,7 +194,7 @@ function Sparkline({ values, tone = 'up' }: { values: number[]; tone?: 'up' | 'd
 function AreaChart({ values }: { values: number[] }) {
   const w = 600;
   const h = 180;
-  const { line, area } = areaChartPath(values, w, h);
+  const { line, area, lastPoint } = areaChartPath(values, w, h);
   const gridLines = [0.2, 0.45, 0.7].map((pct) => h - 8 - pct * (h - 16));
 
   return (
@@ -209,6 +210,12 @@ function AreaChart({ values }: { values: number[] }) {
       ))}
       <path d={area} fill="url(#mrr-gradient)" />
       <polyline fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={line} />
+      {lastPoint && (
+        <>
+          <circle cx={lastPoint.x} cy={lastPoint.y} r="8" fill="#f97316" opacity="0.15" />
+          <circle cx={lastPoint.x} cy={lastPoint.y} r="4.5" fill="#f97316" stroke="white" strokeWidth="2" />
+        </>
+      )}
     </svg>
   );
 }
@@ -276,8 +283,10 @@ function ResourceId({ id }: { id: string }) {
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (
     <div className="empty-state">
-      <div className="empty-state-icon">
-        <IconInvoice />
+      <div className="empty-state-ring">
+        <div className="empty-state-icon">
+          <IconInvoice />
+        </div>
       </div>
       <h3>{title}</h3>
       <p>{description}</p>
@@ -1089,6 +1098,7 @@ export default function App() {
                     const productPrices = prices.filter((p) => p.product_id === product.id);
                     return (
                       <div key={product.id} className="product-card">
+                        <div className="product-card-accent" aria-hidden="true" />
                         <div className="product-card-header">
                           <div>
                             <h3>{product.name}</h3>
