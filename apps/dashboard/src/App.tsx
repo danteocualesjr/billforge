@@ -644,7 +644,8 @@ export default function App() {
                 key={id}
                 className={`sidebar-link ${tab === id ? 'active' : ''}`}
                 onClick={() => setTab(id)}
-                title={label}
+                title={sidebarCollapsed ? undefined : label}
+                data-tooltip={label}
               >
                 <Icon className="sidebar-icon" />
                 <span className="sidebar-link-label">{label}</span>
@@ -659,11 +660,11 @@ export default function App() {
 
           <div className="sidebar-section">
             <div className="sidebar-section-label">Developers</div>
-            <button type="button" className="sidebar-link" title="API keys" onClick={() => setToast('API keys — coming soon')}>
+            <button type="button" className="sidebar-link" data-tooltip="API keys" onClick={() => setToast('API keys — coming soon')}>
               <IconKey className="sidebar-icon" />
               <span className="sidebar-link-label">API keys</span>
             </button>
-            <button type="button" className="sidebar-link" title="Webhooks" onClick={() => setToast('Webhooks — coming soon')}>
+            <button type="button" className="sidebar-link" data-tooltip="Webhooks" onClick={() => setToast('Webhooks — coming soon')}>
               <IconWebhook className="sidebar-icon" />
               <span className="sidebar-link-label">Webhooks</span>
             </button>
