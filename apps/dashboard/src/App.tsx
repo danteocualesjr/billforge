@@ -6,6 +6,7 @@ import {
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconClose,
   IconCopy,
   IconDollar,
   IconHome,
@@ -335,14 +336,17 @@ function SkeletonTable({ rows = 5, cols = 4 }: { rows?: number; cols?: number })
 
 function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   useEffect(() => {
-    const t = setTimeout(onDismiss, 3000);
+    const t = setTimeout(onDismiss, 4000);
     return () => clearTimeout(t);
   }, [message, onDismiss]);
 
   return (
     <div className="toast" role="status">
       <IconCheck className="toast-icon" />
-      {message}
+      <span className="toast-message">{message}</span>
+      <button type="button" className="toast-dismiss" onClick={onDismiss} aria-label="Dismiss">
+        <IconClose />
+      </button>
     </div>
   );
 }
@@ -350,7 +354,9 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 function DataTable({ children }: { children: React.ReactNode }) {
   return (
     <div className="table-card">
-      <table>{children}</table>
+      <div className="table-scroll">
+        <table>{children}</table>
+      </div>
     </div>
   );
 }
