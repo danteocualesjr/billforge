@@ -284,12 +284,20 @@ function ResourceId({ id }: { id: string }) {
   );
 }
 
-function EmptyState({ title, description }: { title: string; description: string }) {
+function EmptyState({
+  title,
+  description,
+  icon: Icon = IconInvoice,
+}: {
+  title: string;
+  description: string;
+  icon?: typeof IconInvoice;
+}) {
   return (
     <div className="empty-state">
       <div className="empty-state-ring">
         <div className="empty-state-icon">
-          <IconInvoice />
+          <Icon />
         </div>
       </div>
       <h3>{title}</h3>
@@ -873,7 +881,7 @@ export default function App() {
                     </div>
                   </div>
                   {planBreakdown.length === 0 ? (
-                    <EmptyState title="No recurring revenue" description="Active subscriptions with recurring prices will appear here." />
+                    <EmptyState title="No recurring revenue" description="Active subscriptions with recurring prices will appear here." icon={IconChart} />
                   ) : (
                     <div className="plan-breakdown">
                       {planBreakdown.map(({ name, amount }) => (
@@ -992,7 +1000,7 @@ export default function App() {
             loading && customers.length === 0 ? (
               <SkeletonTable rows={6} cols={4} />
             ) : customers.length === 0 ? (
-              <EmptyState title="No customers" description="Customers are created via POST /v1/customers." />
+              <EmptyState title="No customers" description="Customers are created via POST /v1/customers." icon={IconUsers} />
             ) : (
               <DataTable>
                 <thead>
@@ -1021,7 +1029,7 @@ export default function App() {
             loading && subscriptions.length === 0 ? (
               <SkeletonTable rows={6} cols={5} />
             ) : subscriptions.length === 0 ? (
-              <EmptyState title="No subscriptions" description="Subscriptions link customers to pricing plans." />
+              <EmptyState title="No subscriptions" description="Subscriptions link customers to pricing plans." icon={IconRefresh} />
             ) : (
               <DataTable>
                 <thead>
@@ -1058,7 +1066,7 @@ export default function App() {
             loading && invoices.length === 0 ? (
               <SkeletonTable rows={6} cols={6} />
             ) : invoices.length === 0 ? (
-              <EmptyState title="No invoices" description="Invoices are auto-generated when billing periods end." />
+              <EmptyState title="No invoices" description="Invoices are auto-generated when billing periods end." icon={IconInvoice} />
             ) : (
               <>
                 <div className="table-toolbar">
