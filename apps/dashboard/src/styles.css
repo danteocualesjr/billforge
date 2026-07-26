@@ -41,6 +41,16 @@
   box-sizing: border-box;
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible) {
+  outline: none;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -114,6 +124,32 @@ body {
   flex-shrink: 0;
 }
 
+.login-stats {
+  display: flex;
+  gap: 32px;
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.login-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.login-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.02em;
+}
+
+.login-stat-label {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 .login-right {
   display: flex;
   align-items: center;
@@ -130,6 +166,17 @@ body {
   border-radius: var(--radius-xl);
   padding: 36px;
   box-shadow: var(--shadow-md);
+  position: relative;
+}
+
+.login-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: calc(var(--radius-xl) + 1px);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25), transparent 50%, rgba(249, 115, 22, 0.08));
+  z-index: -1;
+  pointer-events: none;
 }
 
 .login-card h2 {
@@ -777,6 +824,43 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+}
+
+.metric-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.metric-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  flex-shrink: 0;
+}
+
+.metric-icon-orange {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.metric-icon-blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.metric-icon-green {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.metric-icon-purple {
+  background: #f5f3ff;
+  color: #7c3aed;
 }
 
 .metric-label {

@@ -7,6 +7,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconCopy,
+  IconDollar,
   IconHome,
   IconInvoice,
   IconKey,
@@ -220,6 +221,8 @@ function MetricCard({
   badgeTone = 'up',
   sparkValues,
   sparkTone = 'up',
+  icon: Icon,
+  iconTone = 'orange',
 }: {
   label: string;
   value: string;
@@ -228,11 +231,20 @@ function MetricCard({
   badgeTone?: 'up' | 'down' | 'neutral' | 'warn';
   sparkValues: number[];
   sparkTone?: 'up' | 'down' | 'neutral';
+  icon?: typeof IconDollar;
+  iconTone?: 'orange' | 'green' | 'blue' | 'purple';
 }) {
   return (
     <div className="metric-card">
       <div className="metric-card-header">
-        <span className="metric-label">{label}</span>
+        <span className="metric-label-row">
+          {Icon && (
+            <span className={`metric-icon metric-icon-${iconTone}`}>
+              <Icon />
+            </span>
+          )}
+          <span className="metric-label">{label}</span>
+        </span>
         <Sparkline values={sparkValues} tone={sparkTone} />
       </div>
       <div className="metric-value-row">
@@ -542,6 +554,20 @@ export default function App() {
             <li>Automated invoicing & payment collection</li>
             <li>Usage-based metering with included units</li>
           </ul>
+          <div className="login-stats">
+            <div className="login-stat">
+              <span className="login-stat-value">99.9%</span>
+              <span className="login-stat-label">Uptime SLA</span>
+            </div>
+            <div className="login-stat">
+              <span className="login-stat-value">&lt;50ms</span>
+              <span className="login-stat-label">API latency</span>
+            </div>
+            <div className="login-stat">
+              <span className="login-stat-value">REST</span>
+              <span className="login-stat-label">+ webhooks</span>
+            </div>
+          </div>
         </div>
         <div className="login-right">
           <div className="login-card">
@@ -719,6 +745,8 @@ export default function App() {
                   detail={`From ${activeSubs.length} active subscription${activeSubs.length === 1 ? '' : 's'}`}
                   badge={mrrGrowth}
                   sparkValues={mrrTrend}
+                  icon={IconDollar}
+                  iconTone="orange"
                 />
                 <MetricCard
                   label="Active customers"
@@ -727,6 +755,8 @@ export default function App() {
                   badge={newCustomers > 0 ? `+${newCustomers}` : undefined}
                   badgeTone="up"
                   sparkValues={customerTrend}
+                  icon={IconUsers}
+                  iconTone="blue"
                 />
                 <MetricCard
                   label="Open invoices"
@@ -736,6 +766,8 @@ export default function App() {
                   badgeTone={pastDueInvoices.length > 0 ? 'warn' : 'neutral'}
                   sparkValues={invoiceTrend}
                   sparkTone={pastDueInvoices.length > 0 ? 'down' : 'neutral'}
+                  icon={IconInvoice}
+                  iconTone="purple"
                 />
                 <MetricCard
                   label="Usage reported"
@@ -743,6 +775,8 @@ export default function App() {
                   detail="API units this period"
                   badge={totalUsage > 0 ? '+12.4%' : undefined}
                   sparkValues={usageTrend}
+                  icon={IconChart}
+                  iconTone="green"
                 />
               </section>
 
@@ -833,7 +867,12 @@ export default function App() {
                                 ) : '—'}
                               </td>
                               <td><span className="invoice-id">{inv.id}</span></td>
-                              <td className="muted-cell">{formatShortDate(inv.created_at)}</td>
+                              <td className="muted-cell">
+                                <span className="date-cell">
+                                  <span>{formatShortDate(inv.created_at)}</span>
+                                  <span className="date-relative">{formatRelative(inv.created_at)}</span>
+                                </span>
+                              </td>
                               <td><StatusBadge status={inv.status} /></td>
                               <td className="amount-cell">{formatMoney(inv.total, inv.currency)}</td>
                             </tr>
