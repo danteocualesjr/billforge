@@ -209,7 +209,39 @@ body {
   color: var(--text);
   background: var(--surface);
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field-input-group {
+  position: relative;
   margin-bottom: 20px;
+}
+
+.field-input-group .field-input {
+  padding-right: 44px;
+  margin-bottom: 0;
+}
+
+.field-input-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.field-input-toggle:hover {
+  background: var(--border-light);
+  color: var(--text-secondary);
 }
 
 .field-input:focus {

@@ -165,3 +165,20 @@ export function IconClose({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconEye({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16">
+      <path d="M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8s-2.5 4.5-6.5 4.5S1.5 8 1.5 8z" strokeLinejoin="round" />
+      <circle cx="8" cy="8" r="2" />
+    </svg>
+  );
+}
+
+export function IconEyeOff({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16">
+      <path d="M2 2l12 12M6.5 6.7A3.5 3.5 0 008 11.5c2.2 0 4-1.5 5.5-3.5M4.2 4.8C2.8 5.8 1.5 8 1.5 8s2.5 4.5 6.5 4.5c.8 0 1.5-.15 2.2-.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

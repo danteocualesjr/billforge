@@ -9,6 +9,8 @@ import {
   IconClose,
   IconCopy,
   IconDollar,
+  IconEye,
+  IconEyeOff,
   IconHome,
   IconInvoice,
   IconKey,
@@ -393,6 +395,7 @@ export default function App() {
   const [usage, setUsage] = useState<any[]>([]);
   const [toast, setToast] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getSidebarCollapsed);
+  const [showApiKey, setShowApiKey] = useState(false);
   const keyRecoveryAttempted = useRef(false);
 
   function applyMockData() {
@@ -589,13 +592,24 @@ export default function App() {
             <h2>Sign in to your account</h2>
             <p className="login-subtitle">Enter your test mode API key to access the dashboard.</p>
             <label className="field-label">API key</label>
-            <input
-              className="field-input"
-              value={apiKey}
-              onChange={(e) => setApiKeyState(e.target.value)}
-              placeholder={DEMO_API_KEY}
-              onKeyDown={(e) => e.key === 'Enter' && saveKey()}
-            />
+            <div className="field-input-group">
+              <input
+                className="field-input"
+                type={showApiKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={(e) => setApiKeyState(e.target.value)}
+                placeholder={DEMO_API_KEY}
+                onKeyDown={(e) => e.key === 'Enter' && saveKey()}
+              />
+              <button
+                type="button"
+                className="field-input-toggle"
+                onClick={() => setShowApiKey((v) => !v)}
+                aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+              >
+                {showApiKey ? <IconEyeOff /> : <IconEye />}
+              </button>
+            </div>
             <button className="btn btn-accent btn-full" onClick={saveKey}>
               Continue
             </button>
