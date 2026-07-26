@@ -645,7 +645,8 @@ export default function App() {
             <h2>Sign in to your account</h2>
             <p className="login-subtitle">Enter your test mode API key to access the dashboard.</p>
             <label className="field-label">API key</label>
-            <div className="field-input-group">
+            <div className="field-input-group field-input-group-icon">
+              <IconKey className="field-input-prefix" />
               <input
                 className="field-input"
                 type={showApiKey ? 'text' : 'password'}
