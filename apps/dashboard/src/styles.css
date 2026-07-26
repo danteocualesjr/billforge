@@ -1458,12 +1458,20 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
+tbody tr {
+  transition: background 0.12s;
+}
+
 tbody tr:nth-child(even) {
   background: rgba(249, 250, 251, 0.6);
 }
 
 tbody tr:hover {
   background: #f5f5f5;
+}
+
+tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .primary-cell {
