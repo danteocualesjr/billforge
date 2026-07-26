@@ -711,6 +711,13 @@ body {
   flex-shrink: 0;
 }
 
+.last-refreshed {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Content ── */
 
 .content {

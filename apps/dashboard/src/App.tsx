@@ -96,6 +96,16 @@ function formatRelative(iso: string) {
   return formatDate(iso);
 }
 
+function formatTimeAgo(iso: string) {
+  const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (sec < 10) return 'Just now';
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  return `${hr}h ago`;
+}
+
 function initials(name?: string, email?: string) {
   const source = name?.trim() || email?.trim() || '?';
   const parts = source.split(/\s+/);
@@ -430,6 +440,7 @@ export default function App() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [usage, setUsage] = useState<any[]>([]);
   const [toast, setToast] = useState('');
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getSidebarCollapsed);
   const [showApiKey, setShowApiKey] = useState(false);
   const keyRecoveryAttempted = useRef(false);
@@ -450,6 +461,7 @@ export default function App() {
   async function loadAll() {
     if (useMock) {
       applyMockData();
+      setLastRefreshed(new Date());
       return;
     }
     if (!getApiKey()) return;
@@ -474,6 +486,7 @@ export default function App() {
       setUseMock(false);
       localStorage.removeItem(MOCK_MODE_KEY);
       keyRecoveryAttempted.current = false;
+      setLastRefreshed(new Date());
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to load';
 
@@ -750,6 +763,11 @@ export default function App() {
             </div>
           </div>
           <div className="topbar-right">
+            {lastRefreshed && !loading && (
+              <span className="last-refreshed" title={lastRefreshed.toLocaleString()}>
+                Updated {formatTimeAgo(lastRefreshed.toISOString())}
+              </span>
+            )}
             <button className={`btn btn-ghost${loading ? ' btn-loading' : ''}`} onClick={loadAll} disabled={loading}>
               <IconRefresh className={loading ? 'icon-spin' : undefined} />
               Refresh
@@ -961,7 +979,7 @@ export default function App() {
                     </button>
                   </div>
                   {activeSubs.length === 0 ? (
-                    <EmptyState title="No subscriptions" description="Create a subscription via the API to get started." />
+                    <EmptyState title="No subscriptions" description="Create a subscription via the API to get started." icon={IconRefresh} />
                   ) : (
                     <ul className="subscription-list">
                       {activeSubs.slice(0, 5).map((s) => {
@@ -1138,7 +1156,7 @@ export default function App() {
             loading && usage.length === 0 ? (
               <SkeletonTable rows={6} cols={4} />
             ) : usage.length === 0 ? (
-              <EmptyState title="No usage records" description="Report usage via POST /v1/usage_records." />
+              <EmptyState title="No usage records" description="Report usage via POST /v1/usage_records." icon={IconChart} />
             ) : (
               <DataTable>
                 <thead>
@@ -1176,7 +1194,7 @@ export default function App() {
                   ))}
                 </div>
               ) : products.length === 0 ? (
-                <EmptyState title="No products" description="Products are the goods or services you offer." />
+                <EmptyState title="No products" description="Products are the goods or services you offer." icon={IconProduct} />
               ) : (
                 <div className="product-grid">
                   {products.map((product) => {
