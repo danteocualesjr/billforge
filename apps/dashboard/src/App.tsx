@@ -368,6 +368,7 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
       <button type="button" className="toast-dismiss" onClick={onDismiss} aria-label="Dismiss">
         <IconClose />
       </button>
+      <div className="toast-progress" aria-hidden="true" />
     </div>
   );
 }

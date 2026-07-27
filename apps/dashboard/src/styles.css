@@ -1836,7 +1836,7 @@ tbody tr:hover td:first-child {
   gap: 10px;
   background: var(--sidebar-bg);
   color: white;
-  padding: 12px 14px 12px 18px;
+  padding: 12px 14px 16px 18px;
   border-radius: var(--radius-lg);
   font-size: 0.875rem;
   font-weight: 500;
@@ -1844,6 +1844,22 @@ tbody tr:hover td:first-child {
   z-index: 100;
   animation: toast-in 0.25s ease;
   max-width: 360px;
+  overflow: hidden;
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 0 2px 2px var(--radius-lg);
+  animation: toast-progress 4s linear forwards;
+}
+
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
 }
 
 .toast-message {
