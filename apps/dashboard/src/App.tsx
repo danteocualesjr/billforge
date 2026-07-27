@@ -15,6 +15,7 @@ import {
   IconInvoice,
   IconKey,
   IconLogo,
+  IconLogout,
   IconPlus,
   IconProduct,
   IconRefresh,
@@ -795,7 +796,10 @@ export default function App() {
               <span className="user-card-name">Riley Park</span>
               <span className="user-card-org">Acme Inc.</span>
             </span>
-            <IconChevronRight className="user-card-chevron" />
+            <span className="user-card-action">
+              <IconLogout className="user-card-logout" />
+              <span className="user-card-signout">Sign out</span>
+            </span>
           </button>
         </div>
       </aside>

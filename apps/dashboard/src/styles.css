@@ -511,6 +511,38 @@ body {
   transition: opacity 0.15s ease;
 }
 
+.user-card-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  color: #9ca3af;
+  transition: color 0.12s;
+}
+
+.user-card-logout {
+  flex-shrink: 0;
+}
+
+.user-card-signout {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 0.15s, max-width 0.15s ease;
+}
+
+.user-card:hover .user-card-action {
+  color: #fca5a5;
+}
+
+.user-card:hover .user-card-signout {
+  opacity: 1;
+  max-width: 64px;
+}
+
 .shell.sidebar-collapsed .sidebar-header {
   flex-direction: column;
   padding: 18px 12px 12px;
@@ -526,7 +558,7 @@ body {
 .shell.sidebar-collapsed .sidebar-link-label,
 .shell.sidebar-collapsed .sidebar-count,
 .shell.sidebar-collapsed .user-card-info,
-.shell.sidebar-collapsed .user-card-chevron {
+.shell.sidebar-collapsed .user-card-action {
   display: none;
 }
 
