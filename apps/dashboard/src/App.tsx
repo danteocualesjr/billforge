@@ -375,9 +375,32 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 }
 
 function DataTable({ children }: { children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollShadow, setScrollShadow] = useState({ top: false, bottom: false });
+
+  function updateScrollShadow() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setScrollShadow({
+      top: el.scrollTop > 4,
+      bottom: el.scrollTop + el.clientHeight < el.scrollHeight - 4,
+    });
+  }
+
+  useEffect(() => {
+    updateScrollShadow();
+    const el = scrollRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(updateScrollShadow);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [children]);
+
   return (
-    <div className="table-card">
-      <div className="table-scroll">
+    <div
+      className={`table-card${scrollShadow.top ? ' table-scroll-top' : ''}${scrollShadow.bottom ? ' table-scroll-bottom' : ''}`}
+    >
+      <div className="table-scroll" ref={scrollRef} onScroll={updateScrollShadow}>
         <table>{children}</table>
       </div>
     </div>
