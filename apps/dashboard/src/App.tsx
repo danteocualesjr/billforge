@@ -26,6 +26,7 @@ import {
 type Tab = 'overview' | 'customers' | 'subscriptions' | 'invoices' | 'usage' | 'products';
 type Period = '7d' | '30d' | '12m';
 type InvoiceFilter = 'all' | 'open' | 'paid' | 'past_due';
+type SubscriptionFilter = 'all' | 'active' | 'trialing' | 'canceled';
 
 const SIDEBAR_COLLAPSED_KEY = 'billforge_sidebar_collapsed';
 const MOCK_MODE_KEY = 'billforge_mock_mode';
@@ -432,6 +433,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
   const [period, setPeriod] = useState<Period>('12m');
   const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<SubscriptionFilter>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
@@ -580,6 +582,11 @@ export default function App() {
   const filteredInvoices = invoiceFilter === 'all'
     ? invoices
     : invoices.filter((i) => i.status === invoiceFilter);
+  const trialingSubs = subscriptions.filter((s) => s.status === 'trialing');
+  const canceledSubs = subscriptions.filter((s) => s.status === 'canceled');
+  const filteredSubscriptions = subscriptionFilter === 'all'
+    ? subscriptions
+    : subscriptions.filter((s) => s.status === subscriptionFilter);
   const activeSubs = subscriptions.filter((s) => s.status === 'active' || s.status === 'trialing');
   const mrr = activeSubs.reduce((sum, s) => {
     const price = prices.find((p) => p.id === s.price_id);
@@ -1058,7 +1065,30 @@ export default function App() {
             ) : subscriptions.length === 0 ? (
               <EmptyState title="No subscriptions" description="Subscriptions link customers to pricing plans." icon={IconRefresh} />
             ) : (
-              <DataTable>
+              <>
+                <div className="table-toolbar">
+                  <FilterPills
+                    value={subscriptionFilter}
+                    onChange={setSubscriptionFilter}
+                    options={[
+                      { id: 'all', label: 'All', count: subscriptions.length },
+                      { id: 'active', label: 'Active', count: activeSubs.length },
+                      { id: 'trialing', label: 'Trialing', count: trialingSubs.length },
+                      { id: 'canceled', label: 'Canceled', count: canceledSubs.length },
+                    ]}
+                  />
+                  <span className="table-toolbar-meta">
+                    {filteredSubscriptions.length} of {subscriptions.length} shown
+                  </span>
+                </div>
+                {filteredSubscriptions.length === 0 ? (
+                  <EmptyState
+                    title="No matching subscriptions"
+                    description={`No subscriptions with status "${subscriptionFilter}".`}
+                    icon={IconRefresh}
+                  />
+                ) : (
+                  <DataTable>
                 <thead>
                   <tr>
                     <th>Customer</th>
@@ -1069,7 +1099,7 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {subscriptions.map((s) => {
+                  {filteredSubscriptions.map((s) => {
                     const price = prices.find((p) => p.id === s.price_id);
                     const customer = customers.find((c) => c.id === s.customer_id);
                     return (
@@ -1085,7 +1115,9 @@ export default function App() {
                     );
                   })}
                 </tbody>
-              </DataTable>
+                  </DataTable>
+                )}
+              </>
             )
           )}
 
