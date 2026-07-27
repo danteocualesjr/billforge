@@ -1615,6 +1615,16 @@ tbody tr:hover td:first-child {
   opacity: 0.6;
 }
 
+.resource-id-copied {
+  color: var(--success-text);
+  background: var(--success-bg);
+}
+
+.resource-id-copied svg {
+  opacity: 1 !important;
+  color: var(--success-text);
+}
+
 /* ── Avatars ── */
 
 .person-cell {

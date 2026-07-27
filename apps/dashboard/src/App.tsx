@@ -288,7 +288,7 @@ function ResourceId({ id }: { id: string }) {
   }
 
   return (
-    <button type="button" className="resource-id" onClick={copy} title="Copy ID">
+    <button type="button" className={`resource-id${copied ? ' resource-id-copied' : ''}`} onClick={copy} title={copied ? 'Copied!' : 'Copy ID'}>
       <span>{id}</span>
       {copied ? <IconCheck /> : <IconCopy />}
     </button>
