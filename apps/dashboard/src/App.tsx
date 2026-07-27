@@ -434,6 +434,7 @@ export default function App() {
   const [period, setPeriod] = useState<Period>('12m');
   const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<SubscriptionFilter>('all');
+  const [customerSearch, setCustomerSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
@@ -587,6 +588,16 @@ export default function App() {
   const filteredSubscriptions = subscriptionFilter === 'all'
     ? subscriptions
     : subscriptions.filter((s) => s.status === subscriptionFilter);
+  const filteredCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter(
+      (c) =>
+        c.name?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.id.toLowerCase().includes(q),
+    );
+  }, [customers, customerSearch]);
   const activeSubs = subscriptions.filter((s) => s.status === 'active' || s.status === 'trialing');
   const mrr = activeSubs.reduce((sum, s) => {
     const price = prices.find((p) => p.id === s.price_id);
@@ -1036,7 +1047,40 @@ export default function App() {
             ) : customers.length === 0 ? (
               <EmptyState title="No customers" description="Customers are created via POST /v1/customers." icon={IconUsers} />
             ) : (
-              <DataTable>
+              <>
+                <div className="table-toolbar">
+                  <div className="table-search">
+                    <IconSearch className="table-search-icon" />
+                    <input
+                      type="search"
+                      className="table-search-input"
+                      placeholder="Search by name, email, or ID…"
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                    />
+                    {customerSearch && (
+                      <button
+                        type="button"
+                        className="table-search-clear"
+                        onClick={() => setCustomerSearch('')}
+                        aria-label="Clear search"
+                      >
+                        <IconClose />
+                      </button>
+                    )}
+                  </div>
+                  <span className="table-toolbar-meta">
+                    {filteredCustomers.length} of {customers.length} shown
+                  </span>
+                </div>
+                {filteredCustomers.length === 0 ? (
+                  <EmptyState
+                    title="No matching customers"
+                    description={`No results for "${customerSearch}".`}
+                    icon={IconUsers}
+                  />
+                ) : (
+                  <DataTable>
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -1046,7 +1090,7 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.map((c) => (
+                  {filteredCustomers.map((c) => (
                     <tr key={c.id}>
                       <td className="primary-cell"><PersonCell name={c.name} email={c.email} /></td>
                       <td>{c.email}</td>
@@ -1055,7 +1099,9 @@ export default function App() {
                     </tr>
                   ))}
                 </tbody>
-              </DataTable>
+                  </DataTable>
+                )}
+              </>
             )
           )}
 
