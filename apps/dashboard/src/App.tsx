@@ -442,6 +442,7 @@ export default function App() {
   const [usage, setUsage] = useState<any[]>([]);
   const [toast, setToast] = useState('');
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [, setRefreshTick] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getSidebarCollapsed);
   const [showApiKey, setShowApiKey] = useState(false);
   const keyRecoveryAttempted = useRef(false);
@@ -509,6 +510,12 @@ export default function App() {
       loadAll();
     }
   }, [apiKey, useMock]);
+
+  useEffect(() => {
+    if (!lastRefreshed) return;
+    const id = setInterval(() => setRefreshTick((t) => t + 1), 30000);
+    return () => clearInterval(id);
+  }, [lastRefreshed]);
 
   function saveKey() {
     localStorage.removeItem(MOCK_MODE_KEY);
