@@ -168,9 +168,22 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`badge badge-${status}`}>
       <span className="badge-dot" aria-hidden="true" />
-      {status.replace('_', ' ')}
+      {status.replaceAll('_', ' ')}
     </span>
   );
+}
+
+function monthlyRecurringAmount(price: {
+  type: string;
+  unit_amount: number;
+  interval: string | null;
+  interval_count: number;
+}) {
+  if (price.type !== 'recurring') return 0;
+  const count = price.interval_count || 1;
+  if (price.interval === 'year') return Math.round(price.unit_amount / (12 * count));
+  if (price.interval === 'month') return Math.round(price.unit_amount / count);
+  return price.unit_amount;
 }
 
 function Avatar({ name, email, small }: { name?: string; email?: string; small?: boolean }) {
@@ -526,7 +539,13 @@ export default function App() {
         return;
       }
 
-      applyMockData();
+      // Only fall back to sample data for the demo key / offline demo flow.
+      if (!getApiKey() || getApiKey() === DEMO_API_KEY) {
+        applyMockData();
+        return;
+      }
+
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -596,9 +615,13 @@ export default function App() {
       setToast('Invoice marked as paid');
       return;
     }
-    await api.payInvoice(id);
-    setToast('Invoice marked as paid');
-    loadAll();
+    try {
+      await api.payInvoice(id);
+      setToast('Invoice marked as paid');
+      loadAll();
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : 'Failed to pay invoice');
+    }
   }
 
   const openInvoices = invoices.filter((i) => i.status === 'open');
@@ -623,9 +646,10 @@ export default function App() {
     );
   }, [customers, customerSearch]);
   const activeSubs = subscriptions.filter((s) => s.status === 'active' || s.status === 'trialing');
-  const mrr = activeSubs.reduce((sum, s) => {
+  const payingSubs = subscriptions.filter((s) => s.status === 'active');
+  const mrr = payingSubs.reduce((sum, s) => {
     const price = prices.find((p) => p.id === s.price_id);
-    return sum + (price?.type === 'recurring' ? price.unit_amount : 0);
+    return sum + (price ? monthlyRecurringAmount(price) : 0);
   }, 0);
   const totalUsage = usage.reduce((sum, u) => sum + u.quantity, 0);
   const openInvoiceTotal = openInvoices.reduce((s, i) => s + i.total, 0) + pastDueInvoices.reduce((s, i) => s + i.total, 0);
@@ -640,16 +664,16 @@ export default function App() {
 
   const planBreakdown = useMemo(() => {
     const map = new Map<string, number>();
-    for (const sub of activeSubs) {
+    for (const sub of payingSubs) {
       const price = prices.find((p) => p.id === sub.price_id);
       if (!price || price.type !== 'recurring') continue;
       const name = price.nickname ?? 'Other';
-      map.set(name, (map.get(name) ?? 0) + price.unit_amount);
+      map.set(name, (map.get(name) ?? 0) + monthlyRecurringAmount(price));
     }
     return [...map.entries()]
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount);
-  }, [activeSubs, prices]);
+  }, [payingSubs, prices]);
 
   const maxPlanMrr = planBreakdown[0]?.amount ?? 1;
   const mrrGrowth = mrr > 0 && mrrTrend[0] > 0
@@ -884,7 +908,7 @@ export default function App() {
                 <MetricCard
                   label="Monthly recurring revenue"
                   value={formatMoney(mrr)}
-                  detail={`From ${activeSubs.length} active subscription${activeSubs.length === 1 ? '' : 's'}`}
+                  detail={`From ${payingSubs.length} active subscription${payingSubs.length === 1 ? '' : 's'}`}
                   badge={mrrGrowth}
                   sparkValues={mrrTrend}
                   icon={IconDollar}

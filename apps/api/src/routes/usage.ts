@@ -7,8 +7,12 @@ export const usageRoutes = new Hono();
 usageRoutes.post('/usage_records', async (c) => {
   const merchant = c.get('merchant') as { id: string };
   const body = createUsageRecordSchema.parse(await c.req.json());
-  const sub = db.prepare('SELECT id FROM subscriptions WHERE id = ? AND merchant_id = ?').get(body.subscription, merchant.id);
+  const sub = db.prepare('SELECT id, status FROM subscriptions WHERE id = ? AND merchant_id = ?')
+    .get(body.subscription, merchant.id) as { id: string; status: string } | undefined;
   if (!sub) return c.json({ error: { type: 'invalid_request', message: 'Subscription not found' } }, 404);
+  if (sub.status === 'canceled') {
+    return c.json({ error: { type: 'invalid_request', message: 'Cannot report usage for a canceled subscription' } }, 400);
+  }
 
   const id = generateId('usage');
   const timestamp = body.timestamp ?? new Date().toISOString();

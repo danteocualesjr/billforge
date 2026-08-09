@@ -30,6 +30,7 @@ export function createSubscriptionState(
 
   if (trialDays > 0) {
     const trialEnd = addDays(now, trialDays);
+    // First paid period begins when the trial ends.
     const { periodStart, periodEnd } = computeSubscriptionPeriods(trialEnd, interval, intervalCount);
     return {
       status: 'trialing',
@@ -69,20 +70,37 @@ export function advanceSubscriptionPeriod(
   intervalCount = 1,
   now: Date = new Date(),
 ): Pick<Subscription, 'status' | 'trial_end' | 'current_period_start' | 'current_period_end' | 'cancel_at_period_end'> {
-  const periodEnd = new Date(sub.current_period_end);
-  if (now < periodEnd) return sub;
-
+  // Trial expiry must be checked before the period-end early return.
+  // Trials store the first paid period as current_period_*, so now < periodEnd
+  // remains true for the whole trial + first paid month.
   if (sub.status === 'trialing' && sub.trial_end && now >= new Date(sub.trial_end)) {
-    const start = new Date(sub.trial_end);
-    const { periodStart, periodEnd: nextEnd } = computeSubscriptionPeriods(start, interval, intervalCount);
+    const periodEnd = new Date(sub.current_period_end);
+
+    if (now < periodEnd) {
+      return {
+        ...sub,
+        status: sub.cancel_at_period_end ? 'canceled' : 'active',
+        trial_end: null,
+      };
+    }
+
+    if (sub.cancel_at_period_end) {
+      return { ...sub, status: 'canceled', trial_end: null };
+    }
+
+    const nextStart = new Date(sub.current_period_end);
+    const { periodStart, periodEnd: nextEnd } = computeSubscriptionPeriods(nextStart, interval, intervalCount);
     return {
       ...sub,
-      status: sub.cancel_at_period_end ? 'canceled' : 'active',
+      status: 'active',
       trial_end: null,
       current_period_start: toIso(periodStart),
       current_period_end: toIso(nextEnd),
     };
   }
+
+  const periodEnd = new Date(sub.current_period_end);
+  if (now < periodEnd) return sub;
 
   if (sub.cancel_at_period_end) {
     return { ...sub, status: 'canceled' };

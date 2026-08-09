@@ -1,5 +1,5 @@
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'paused';
-export type InvoiceStatus = 'draft' | 'open' | 'paid' | 'void' | 'uncollectible';
+export type InvoiceStatus = 'draft' | 'open' | 'paid' | 'past_due' | 'void' | 'uncollectible';
 export type PriceType = 'recurring' | 'metered';
 export type BillingInterval = 'month' | 'year';
 

@@ -1,6 +1,11 @@
 export function addMonths(date: Date, months: number): Date {
   const result = new Date(date);
+  const day = result.getDate();
+  // Set to day 1 first so setMonth cannot overflow (e.g. Jan 31 → Mar 3).
+  result.setDate(1);
   result.setMonth(result.getMonth() + months);
+  const daysInMonth = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+  result.setDate(Math.min(day, daysInMonth));
   return result;
 }
 

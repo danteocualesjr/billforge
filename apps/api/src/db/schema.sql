@@ -67,6 +67,9 @@ CREATE TABLE IF NOT EXISTS invoices (
   created_at TEXT NOT NULL
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS invoices_subscription_period
+  ON invoices(subscription_id, period_start, period_end);
+
 CREATE TABLE IF NOT EXISTS invoice_line_items (
   id TEXT PRIMARY KEY,
   invoice_id TEXT NOT NULL REFERENCES invoices(id),
@@ -96,8 +99,9 @@ CREATE TABLE IF NOT EXISTS webhook_endpoints (
 );
 
 CREATE TABLE IF NOT EXISTS idempotency_keys (
-  key TEXT PRIMARY KEY,
+  key TEXT NOT NULL,
   merchant_id TEXT NOT NULL,
   response TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (merchant_id, key)
 );

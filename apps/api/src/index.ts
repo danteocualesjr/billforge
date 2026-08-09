@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { ZodError } from 'zod';
 import { ensureDemoData } from './seed.js';
 import { authMiddleware } from './middleware/auth.js';
 import { idempotencyMiddleware } from './middleware/idempotency.js';
@@ -13,6 +14,20 @@ import { webhookRoutes } from './routes/webhooks.js';
 const app = new Hono();
 
 app.use('*', cors({ origin: ['http://localhost:5173', 'http://127.0.0.1:5173'] }));
+
+app.onError((err, c) => {
+  if (err instanceof ZodError) {
+    return c.json({
+      error: {
+        type: 'invalid_request',
+        message: err.issues[0]?.message ?? 'Invalid request',
+        details: err.issues,
+      },
+    }, 400);
+  }
+  console.error(err);
+  return c.json({ error: { type: 'api_error', message: 'Internal server error' } }, 500);
+});
 
 app.get('/health', (c) => c.json({ status: 'ok', service: 'billforge-api' }));
 
@@ -28,6 +43,14 @@ v1.route('/', webhookRoutes);
 app.route('/v1', v1);
 
 app.post('/internal/process-invoices', async (c) => {
+  const secret = process.env.INTERNAL_API_SECRET;
+  if (!secret) {
+    return c.json({ error: { type: 'unauthorized', message: 'Internal endpoint disabled' } }, 401);
+  }
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${secret}`) {
+    return c.json({ error: { type: 'unauthorized', message: 'Unauthorized' } }, 401);
+  }
   await processDueInvoices();
   return c.json({ processed: true });
 });

@@ -29,9 +29,13 @@ subscriptionRoutes.post('/subscriptions', async (c) => {
   const body = createSubscriptionSchema.parse(await c.req.json());
 
   const customer = db.prepare('SELECT id FROM customers WHERE id = ? AND merchant_id = ?').get(body.customer, merchant.id);
-  const price = db.prepare('SELECT * FROM prices WHERE id = ? AND merchant_id = ?').get(body.price, merchant.id) as any;
+  const price = db.prepare(`
+    SELECT prices.* FROM prices
+    JOIN products ON products.id = prices.product_id
+    WHERE prices.id = ? AND prices.merchant_id = ? AND prices.active = 1 AND products.active = 1
+  `).get(body.price, merchant.id) as any;
   if (!customer || !price) {
-    return c.json({ error: { type: 'invalid_request', message: 'Customer or price not found' } }, 404);
+    return c.json({ error: { type: 'invalid_request', message: 'Customer or active price not found' } }, 404);
   }
 
   const id = generateId('subscription');
@@ -85,9 +89,19 @@ subscriptionRoutes.post('/subscriptions/:id/change_price', async (c) => {
   const sub = db.prepare('SELECT * FROM subscriptions WHERE id = ? AND merchant_id = ?').get(c.req.param('id'), merchant.id) as any;
   if (!sub) return c.json({ error: { type: 'invalid_request', message: 'Subscription not found' } }, 404);
 
-  const oldPrice = db.prepare('SELECT * FROM prices WHERE id = ?').get(sub.price_id) as any;
-  const newPrice = db.prepare('SELECT * FROM prices WHERE id = ? AND merchant_id = ?').get(body.price, merchant.id) as any;
-  if (!newPrice) return c.json({ error: { type: 'invalid_request', message: 'Price not found' } }, 404);
+  const oldPrice = db.prepare('SELECT * FROM prices WHERE id = ? AND merchant_id = ?').get(sub.price_id, merchant.id) as any;
+  const newPrice = db.prepare(`
+    SELECT prices.* FROM prices
+    JOIN products ON products.id = prices.product_id
+    WHERE prices.id = ? AND prices.merchant_id = ? AND prices.active = 1 AND products.active = 1
+  `).get(body.price, merchant.id) as any;
+  if (!oldPrice || !newPrice) return c.json({ error: { type: 'invalid_request', message: 'Price not found' } }, 404);
+  if (oldPrice.currency !== newPrice.currency) {
+    return c.json({ error: { type: 'invalid_request', message: 'Cannot change to a price with a different currency' } }, 400);
+  }
+  if (oldPrice.type !== newPrice.type) {
+    return c.json({ error: { type: 'invalid_request', message: 'Cannot change to a price with a different billing type' } }, 400);
+  }
 
   const now = new Date();
   const invoiceId = generateId('invoice');
