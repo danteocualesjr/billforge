@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, clearApiKey, DEMO_API_KEY, getApiKey, setApiKey } from './api';
 import { getMockDashboardData } from './mockData';
 import {
+  IconArrowDown,
+  IconArrowUp,
   IconChart,
   IconCheck,
   IconChevronLeft,
@@ -464,6 +466,158 @@ function FilterPills<T extends string>({
   );
 }
 
+type CommandItem = {
+  id: string;
+  group: string;
+  title: string;
+  subtitle?: string;
+  icon: typeof IconHome;
+  tab: Tab;
+  search?: string;
+};
+
+function CommandPalette({
+  open,
+  query,
+  onQueryChange,
+  onClose,
+  items,
+  onSelect,
+}: {
+  open: boolean;
+  query: string;
+  onQueryChange: (q: string) => void;
+  onClose: () => void;
+  items: CommandItem[];
+  onSelect: (item: CommandItem) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items.slice(0, 8);
+    return items.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) ||
+        item.subtitle?.toLowerCase().includes(q) ||
+        item.group.toLowerCase().includes(q) ||
+        item.search?.toLowerCase().includes(q),
+    ).slice(0, 12);
+  }, [items, query]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query, open]);
+
+  useEffect(() => {
+    if (open) {
+      inputRef.current?.focus();
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveIndex((i) => Math.min(i + 1, Math.max(filtered.length - 1, 0)));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveIndex((i) => Math.max(i - 1, 0));
+      } else if (e.key === 'Enter' && filtered[activeIndex]) {
+        e.preventDefault();
+        onSelect(filtered[activeIndex]);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, filtered, activeIndex, onClose, onSelect]);
+
+  if (!open) return null;
+
+  const groups = filtered.reduce<Record<string, CommandItem[]>>((acc, item) => {
+    (acc[item.group] ??= []).push(item);
+    return acc;
+  }, {});
+
+  let runningIndex = -1;
+
+  return (
+    <div className="command-overlay" onClick={onClose} role="presentation">
+      <div
+        className="command-palette"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="command-input-row">
+          <IconSearch className="command-search-icon" />
+          <input
+            ref={inputRef}
+            className="command-input"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Search pages, customers, invoices…"
+            aria-label="Search dashboard"
+          />
+          <kbd className="command-esc">esc</kbd>
+        </div>
+        <div className="command-results">
+          {filtered.length === 0 ? (
+            <div className="command-empty">No matches for “{query}”</div>
+          ) : (
+            Object.entries(groups).map(([group, groupItems]) => (
+              <div key={group} className="command-group">
+                <div className="command-group-label">{group}</div>
+                {groupItems.map((item) => {
+                  runningIndex += 1;
+                  const index = runningIndex;
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`command-item${index === activeIndex ? ' active' : ''}`}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => onSelect(item)}
+                    >
+                      <Icon className="command-item-icon" />
+                      <span className="command-item-text">
+                        <span className="command-item-title">{item.title}</span>
+                        {item.subtitle && <span className="command-item-sub">{item.subtitle}</span>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          )}
+        </div>
+        <div className="command-footer">
+          <span className="command-hint">
+            <kbd><IconArrowUp /></kbd>
+            <kbd><IconArrowDown /></kbd>
+            to navigate
+          </span>
+          <span className="command-hint">
+            <kbd>↵</kbd>
+            to open
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [apiKey, setApiKeyState] = useState(getApiKey() || DEMO_API_KEY);
   const [useMock, setUseMock] = useState(() => localStorage.getItem(MOCK_MODE_KEY) === '1');
@@ -485,6 +639,8 @@ export default function App() {
   const [, setRefreshTick] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getSidebarCollapsed);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
   const keyRecoveryAttempted = useRef(false);
 
   function applyMockData() {
@@ -562,6 +718,18 @@ export default function App() {
     const id = setInterval(() => setRefreshTick((t) => t + 1), 30000);
     return () => clearInterval(id);
   }, [lastRefreshed]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandOpen((open) => !open);
+        setCommandQuery('');
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   function saveKey() {
     localStorage.removeItem(MOCK_MODE_KEY);
@@ -687,6 +855,56 @@ export default function App() {
     products: products.length,
   };
 
+  const commandItems = useMemo<CommandItem[]>(() => {
+    const pages: CommandItem[] = OVERVIEW_NAV.map(({ id, label, icon }) => ({
+      id: `page-${id}`,
+      group: 'Pages',
+      title: label,
+      subtitle: PAGE_TITLES[id],
+      icon,
+      tab: id,
+    }));
+    const customerItems: CommandItem[] = customers.slice(0, 20).map((c) => ({
+      id: `customer-${c.id}`,
+      group: 'Customers',
+      title: c.name ?? c.email ?? c.id,
+      subtitle: c.email ?? c.id,
+      icon: IconUsers,
+      tab: 'customers' as Tab,
+      search: `${c.name ?? ''} ${c.email ?? ''} ${c.id}`,
+    }));
+    const invoiceItems: CommandItem[] = invoices.slice(0, 20).map((inv) => ({
+      id: `invoice-${inv.id}`,
+      group: 'Invoices',
+      title: inv.id,
+      subtitle: `${inv.status.replaceAll('_', ' ')} · ${formatMoney(inv.total, inv.currency)}`,
+      icon: IconInvoice,
+      tab: 'invoices' as Tab,
+      search: `${inv.id} ${inv.status} ${inv.customer_id}`,
+    }));
+    const subscriptionItems: CommandItem[] = subscriptions.slice(0, 20).map((s) => {
+      const customer = customers.find((c) => c.id === s.customer_id);
+      const price = prices.find((p) => p.id === s.price_id);
+      return {
+        id: `sub-${s.id}`,
+        group: 'Subscriptions',
+        title: customer?.name ?? customer?.email ?? s.id,
+        subtitle: `${price?.nickname ?? 'Plan'} · ${s.status}`,
+        icon: IconRefresh,
+        tab: 'subscriptions' as Tab,
+        search: `${s.id} ${s.status} ${customer?.name ?? ''} ${customer?.email ?? ''}`,
+      };
+    });
+    return [...pages, ...customerItems, ...invoiceItems, ...subscriptionItems];
+  }, [customers, invoices, subscriptions, prices]);
+
+  function selectCommand(item: CommandItem) {
+    setTab(item.tab);
+    setCustomerSearch(item.group === 'Customers' ? item.title : '');
+    setCommandOpen(false);
+    setCommandQuery('');
+  }
+
   if (!getApiKey() && !useMock) {
     return (
       <div className="login-layout">
@@ -761,6 +979,14 @@ export default function App() {
   return (
     <div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       {toast && <Toast message={toast} onDismiss={() => setToast('')} />}
+      <CommandPalette
+        open={commandOpen}
+        query={commandQuery}
+        onQueryChange={setCommandQuery}
+        onClose={() => { setCommandOpen(false); setCommandQuery(''); }}
+        items={commandItems}
+        onSelect={selectCommand}
+      />
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="sidebar-brand">
@@ -834,11 +1060,11 @@ export default function App() {
             <span className="test-mode-pill">Test mode</span>
           </div>
           <div className="topbar-center">
-            <div className="search-box">
+            <button type="button" className="search-box" onClick={() => { setCommandOpen(true); setCommandQuery(''); }}>
               <IconSearch className="search-icon" />
-              <input placeholder="Search customers, invoices, subscriptions…" disabled />
+              <span className="search-placeholder">Search customers, invoices, subscriptions…</span>
               <span className="search-kbd">⌘K</span>
-            </div>
+            </button>
           </div>
           <div className="topbar-right">
             {lastRefreshed && !loading && (

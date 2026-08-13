@@ -182,3 +182,19 @@ export function IconEyeOff({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconArrowUp({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12">
+      <path d="M8 12.5v-9M4.5 7L8 3.5 11.5 7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconArrowDown({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12">
+      <path d="M8 3.5v9M4.5 9L8 12.5 11.5 9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
