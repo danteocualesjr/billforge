@@ -673,6 +673,30 @@ body {
   min-width: 0;
 }
 
+.mobile-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+
+.mobile-nav-toggle:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.mobile-nav-overlay {
+  display: none;
+}
+
 .topbar-center {
   flex: 1;
   display: flex;
@@ -2257,7 +2281,37 @@ tbody tr:hover td:first-child {
     display: none;
   }
 
+  .mobile-nav-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-nav-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    border: none;
+    padding: 0;
+    background: rgba(17, 24, 39, 0.5);
+    z-index: 20;
+    cursor: pointer;
+    animation: fade-in 0.18s ease;
+  }
+
   .sidebar {
+    display: flex;
+    transform: translateX(-100%);
+    width: var(--sidebar-width);
+    z-index: 30;
+    transition: transform 0.22s ease, width 0.22s ease;
+    box-shadow: none;
+  }
+
+  .shell.mobile-nav-open .sidebar {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.28);
+  }
+
+  .sidebar-toggle {
     display: none;
   }
 
@@ -2275,5 +2329,9 @@ tbody tr:hover td:first-child {
 
   .topbar {
     padding: 0 16px;
+  }
+
+  .topbar-right .last-refreshed {
+    display: none;
   }
 }

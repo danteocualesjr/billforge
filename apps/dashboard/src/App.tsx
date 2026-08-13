@@ -18,6 +18,7 @@ import {
   IconKey,
   IconLogo,
   IconLogout,
+  IconMenu,
   IconPlus,
   IconProduct,
   IconRefresh,
@@ -641,6 +642,7 @@ export default function App() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const keyRecoveryAttempted = useRef(false);
 
   function applyMockData() {
@@ -730,6 +732,23 @@ export default function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [tab]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMobileNavOpen(false);
+    }
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [mobileNavOpen]);
 
   function saveKey() {
     localStorage.removeItem(MOCK_MODE_KEY);
@@ -977,8 +996,16 @@ export default function App() {
   }
 
   return (
-    <div className={`shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+    <div className={`shell${sidebarCollapsed && !mobileNavOpen ? ' sidebar-collapsed' : ''}${mobileNavOpen ? ' mobile-nav-open' : ''}`}>
       {toast && <Toast message={toast} onDismiss={() => setToast('')} />}
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="mobile-nav-overlay"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
       <CommandPalette
         open={commandOpen}
         query={commandQuery}
@@ -1028,11 +1055,11 @@ export default function App() {
 
           <div className="sidebar-section">
             <div className="sidebar-section-label">Developers</div>
-            <button type="button" className="sidebar-link" data-tooltip="API keys" onClick={() => setToast('API keys — coming soon')}>
+            <button type="button" className="sidebar-link" data-tooltip="API keys" onClick={() => { setToast('API keys — coming soon'); setMobileNavOpen(false); }}>
               <IconKey className="sidebar-icon" />
               <span className="sidebar-link-label">API keys</span>
             </button>
-            <button type="button" className="sidebar-link" data-tooltip="Webhooks" onClick={() => setToast('Webhooks — coming soon')}>
+            <button type="button" className="sidebar-link" data-tooltip="Webhooks" onClick={() => { setToast('Webhooks — coming soon'); setMobileNavOpen(false); }}>
               <IconWebhook className="sidebar-icon" />
               <span className="sidebar-link-label">Webhooks</span>
             </button>
@@ -1057,6 +1084,14 @@ export default function App() {
       <div className="main">
         <header className="topbar">
           <div className="topbar-left">
+            <button
+              type="button"
+              className="mobile-nav-toggle"
+              onClick={() => setMobileNavOpen((open) => !open)}
+              aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+            >
+              {mobileNavOpen ? <IconClose /> : <IconMenu />}
+            </button>
             <span className="test-mode-pill">Test mode</span>
           </div>
           <div className="topbar-center">

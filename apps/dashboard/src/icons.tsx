@@ -198,3 +198,11 @@ export function IconArrowDown({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IconMenu({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16">
+      <path d="M2.5 4h11M2.5 8h11M2.5 12h11" strokeLinecap="round" />
+    </svg>
+  );
+}
