@@ -1610,6 +1610,36 @@ th {
   box-shadow: 0 1px 0 var(--border);
 }
 
+.sort-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.sort-header:hover,
+.sort-header.active {
+  color: var(--text);
+}
+
+.sort-indicator {
+  font-size: 0.625rem;
+  opacity: 0.35;
+  font-weight: 500;
+}
+
+.sort-header:hover .sort-indicator,
+.sort-header.active .sort-indicator {
+  opacity: 1;
+}
+
 td {
   padding: 13px 20px;
   border-bottom: 1px solid var(--border-light);

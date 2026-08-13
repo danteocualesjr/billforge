@@ -441,6 +441,45 @@ function PeriodToggle({ value, onChange }: { value: Period; onChange: (p: Period
   );
 }
 
+type SortDir = 'asc' | 'desc';
+
+function SortHeader({
+  label,
+  column,
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  label: string;
+  column: string;
+  sortKey: string;
+  sortDir: SortDir;
+  onSort: (column: string) => void;
+}) {
+  const active = sortKey === column;
+  return (
+    <th aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" className={`sort-header${active ? ' active' : ''}`} onClick={() => onSort(column)}>
+        {label}
+        <span className="sort-indicator" aria-hidden="true">
+          {active ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </button>
+    </th>
+  );
+}
+
+function nextSort(current: { key: string; dir: SortDir }, key: string) {
+  if (current.key === key) return { key, dir: (current.dir === 'asc' ? 'desc' : 'asc') as SortDir };
+  return { key, dir: 'asc' as SortDir };
+}
+
+function compareValues(a: string | number | undefined | null, b: string | number | undefined | null, dir: SortDir) {
+  const mul = dir === 'asc' ? 1 : -1;
+  if (typeof a === 'number' && typeof b === 'number') return (a - b) * mul;
+  return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' }) * mul;
+}
+
 function FilterPills<T extends string>({
   options,
   value,
@@ -627,6 +666,10 @@ export default function App() {
   const [invoiceFilter, setInvoiceFilter] = useState<InvoiceFilter>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<SubscriptionFilter>('all');
   const [customerSearch, setCustomerSearch] = useState('');
+  const [customerSort, setCustomerSort] = useState<{ key: string; dir: SortDir }>({ key: 'created_at', dir: 'desc' });
+  const [subscriptionSort, setSubscriptionSort] = useState<{ key: string; dir: SortDir }>({ key: 'current_period_end', dir: 'desc' });
+  const [invoiceSort, setInvoiceSort] = useState<{ key: string; dir: SortDir }>({ key: 'total', dir: 'desc' });
+  const [usageSort, setUsageSort] = useState<{ key: string; dir: SortDir }>({ key: 'timestamp', dir: 'desc' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [customers, setCustomers] = useState<any[]>([]);
@@ -832,6 +875,52 @@ export default function App() {
         c.id.toLowerCase().includes(q),
     );
   }, [customers, customerSearch]);
+
+  const sortedCustomers = useMemo(() => {
+    return [...filteredCustomers].sort((a, b) => {
+      if (customerSort.key === 'email') return compareValues(a.email, b.email, customerSort.dir);
+      if (customerSort.key === 'created_at') return compareValues(a.created_at, b.created_at, customerSort.dir);
+      return compareValues(a.name ?? a.email, b.name ?? b.email, customerSort.dir);
+    });
+  }, [filteredCustomers, customerSort]);
+
+  const sortedSubscriptions = useMemo(() => {
+    return [...filteredSubscriptions].sort((a, b) => {
+      if (subscriptionSort.key === 'plan') {
+        const planA = prices.find((p) => p.id === a.price_id)?.nickname ?? a.price_id;
+        const planB = prices.find((p) => p.id === b.price_id)?.nickname ?? b.price_id;
+        return compareValues(planA, planB, subscriptionSort.dir);
+      }
+      if (subscriptionSort.key === 'status') return compareValues(a.status, b.status, subscriptionSort.dir);
+      if (subscriptionSort.key === 'current_period_end') {
+        return compareValues(a.current_period_end, b.current_period_end, subscriptionSort.dir);
+      }
+      const nameA = customers.find((c) => c.id === a.customer_id);
+      const nameB = customers.find((c) => c.id === b.customer_id);
+      return compareValues(nameA?.name ?? nameA?.email, nameB?.name ?? nameB?.email, subscriptionSort.dir);
+    });
+  }, [filteredSubscriptions, subscriptionSort, prices, customers]);
+
+  const sortedInvoices = useMemo(() => {
+    return [...filteredInvoices].sort((a, b) => {
+      if (invoiceSort.key === 'status') return compareValues(a.status, b.status, invoiceSort.dir);
+      if (invoiceSort.key === 'period_end') return compareValues(a.period_end, b.period_end, invoiceSort.dir);
+      if (invoiceSort.key === 'customer') {
+        const nameA = customers.find((c) => c.id === a.customer_id);
+        const nameB = customers.find((c) => c.id === b.customer_id);
+        return compareValues(nameA?.name ?? nameA?.email, nameB?.name ?? nameB?.email, invoiceSort.dir);
+      }
+      return compareValues(a.total, b.total, invoiceSort.dir);
+    });
+  }, [filteredInvoices, invoiceSort, customers]);
+
+  const sortedUsage = useMemo(() => {
+    return [...usage].sort((a, b) => {
+      if (usageSort.key === 'quantity') return compareValues(a.quantity, b.quantity, usageSort.dir);
+      if (usageSort.key === 'subscription_id') return compareValues(a.subscription_id, b.subscription_id, usageSort.dir);
+      return compareValues(a.timestamp, b.timestamp, usageSort.dir);
+    });
+  }, [usage, usageSort]);
   const activeSubs = subscriptions.filter((s) => s.status === 'active' || s.status === 'trialing');
   const payingSubs = subscriptions.filter((s) => s.status === 'active');
   const mrr = payingSubs.reduce((sum, s) => {
@@ -1395,14 +1484,14 @@ export default function App() {
                   <DataTable>
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Email</th>
+                    <SortHeader label="Name" column="name" sortKey={customerSort.key} sortDir={customerSort.dir} onSort={(col) => setCustomerSort((s) => nextSort(s, col))} />
+                    <SortHeader label="Email" column="email" sortKey={customerSort.key} sortDir={customerSort.dir} onSort={(col) => setCustomerSort((s) => nextSort(s, col))} />
                     <th>Customer ID</th>
-                    <th>Created</th>
+                    <SortHeader label="Created" column="created_at" sortKey={customerSort.key} sortDir={customerSort.dir} onSort={(col) => setCustomerSort((s) => nextSort(s, col))} />
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCustomers.map((c) => (
+                  {sortedCustomers.map((c) => (
                     <tr key={c.id}>
                       <td className="primary-cell"><PersonCell name={c.name} email={c.email} /></td>
                       <td>{c.email}</td>
@@ -1449,15 +1538,15 @@ export default function App() {
                   <DataTable>
                 <thead>
                   <tr>
-                    <th>Customer</th>
-                    <th>Plan</th>
-                    <th>Status</th>
-                    <th>Current period</th>
+                    <SortHeader label="Customer" column="customer" sortKey={subscriptionSort.key} sortDir={subscriptionSort.dir} onSort={(col) => setSubscriptionSort((s) => nextSort(s, col))} />
+                    <SortHeader label="Plan" column="plan" sortKey={subscriptionSort.key} sortDir={subscriptionSort.dir} onSort={(col) => setSubscriptionSort((s) => nextSort(s, col))} />
+                    <SortHeader label="Status" column="status" sortKey={subscriptionSort.key} sortDir={subscriptionSort.dir} onSort={(col) => setSubscriptionSort((s) => nextSort(s, col))} />
+                    <SortHeader label="Current period" column="current_period_end" sortKey={subscriptionSort.key} sortDir={subscriptionSort.dir} onSort={(col) => setSubscriptionSort((s) => nextSort(s, col))} />
                     <th>Subscription ID</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSubscriptions.map((s) => {
+                  {sortedSubscriptions.map((s) => {
                     const price = prices.find((p) => p.id === s.price_id);
                     const customer = customers.find((c) => c.id === s.customer_id);
                     return (
@@ -1510,16 +1599,16 @@ export default function App() {
                   <DataTable>
                 <thead>
                   <tr>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Customer</th>
-                    <th>Billing period</th>
+                    <SortHeader label="Total" column="total" sortKey={invoiceSort.key} sortDir={invoiceSort.dir} onSort={(col) => setInvoiceSort((s) => nextSort(s, col))} />
+                    <SortHeader label="Status" column="status" sortKey={invoiceSort.key} sortDir={invoiceSort.dir} onSort={(col) => setInvoiceSort((s) => nextSort(s, col))} />
+                    <SortHeader label="Customer" column="customer" sortKey={invoiceSort.key} sortDir={invoiceSort.dir} onSort={(col) => setInvoiceSort((s) => nextSort(s, col))} />
+                    <SortHeader label="Billing period" column="period_end" sortKey={invoiceSort.key} sortDir={invoiceSort.dir} onSort={(col) => setInvoiceSort((s) => nextSort(s, col))} />
                     <th>Invoice ID</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvoices.map((inv) => (
+                  {sortedInvoices.map((inv) => (
                     <tr key={inv.id}>
                       <td className="amount-cell">{formatMoney(inv.total, inv.currency)}</td>
                       <td><StatusBadge status={inv.status} /></td>
@@ -1560,14 +1649,14 @@ export default function App() {
               <DataTable>
                 <thead>
                   <tr>
-                    <th>Quantity</th>
-                    <th>Subscription</th>
-                    <th>Timestamp</th>
+                    <SortHeader label="Quantity" column="quantity" sortKey={usageSort.key} sortDir={usageSort.dir} onSort={(col) => setUsageSort((s) => nextSort(s, col))} />
+                    <SortHeader label="Subscription" column="subscription_id" sortKey={usageSort.key} sortDir={usageSort.dir} onSort={(col) => setUsageSort((s) => nextSort(s, col))} />
+                    <SortHeader label="Timestamp" column="timestamp" sortKey={usageSort.key} sortDir={usageSort.dir} onSort={(col) => setUsageSort((s) => nextSort(s, col))} />
                     <th>Record ID</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {usage.map((u) => (
+                  {sortedUsage.map((u) => (
                     <tr key={u.id}>
                       <td className="primary-cell">{u.quantity.toLocaleString()}</td>
                       <td><ResourceId id={u.subscription_id} /></td>
